@@ -3,7 +3,7 @@
 
 #define BSIZE 128
 #define NONE -1
-#define EOS `\0`
+#define EOS '\0'
 
 #define NUM 256
 #define DIV 257
@@ -19,3 +19,4 @@ struct entry{  /* From of symbol table entry */
     int token;
 };
 
+struct entry symtable[]; /* Symbol table*/
