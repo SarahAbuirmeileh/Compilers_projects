@@ -81,6 +81,12 @@ int lexan(){ /* Lexical Analyzer*/
             ; /* Strip out white space*/
         else if (t == '\n')
             lineno = lineno + 1;
+        else if (t == '#') {
+            while ((t = getchar()) != '\n')
+                ; /* Strip out comments (whole line)*/
+            lineno = lineno + 1;
+        }
+       
         else if (isdigit(t)){
             ungetc(t, stdin);
             scanf("%d", &tokenval);
