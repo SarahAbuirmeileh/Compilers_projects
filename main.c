@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include <stdlib.h> /* To provide a declaration of ‘exit’ */
 
 #define BSIZE 128
@@ -44,9 +45,13 @@ int lastentry = 0; /* Last used position in symtable*/
 // Functions prototypes
 int lexan(void);
 void parse(void);
+void start(void);
+void list(void);
 void expr(void);
 void term(void);
+void moreterms(void);
 void factor(void);
+void morefactors(void);
 void match(int t);
 void emit(int t, int tval);
 int lookup(char s[]);
@@ -108,40 +113,52 @@ int lexan(){ /* Lexical Analyzer*/
 }
 
 /* Parser */
-parse(){ /* parser and translate expression list*/
+void parse(){ /* parser and translate expression list*/
     lookahead = lexan();
-    while(lookahead != DONE){
-        expr(); match(';');
+    start();
+}
+
+void start(){
+    list(); match(DONE);
+}
+
+void list(){
+  if (lookahead == '(' || lookahead == ID || lookahead == NUM) {
+    expr(); match(';'); list();
+  }
+  else {
+    /* Epsilon */
+  }
+}
+
+void expr (){
+  term(); moreterms();
+}
+
+void moreterms(){
+    int t;
+    switch(lookahead){
+    case '+' : case '-' : 
+        t = lookahead;
+        match(lookahead); term(); emit(t, tokenval); moreterms(); break;
+
+    default:
+        return;
     }
 }
 
-expr(){
-    int t;
-    term();
-    while(1)
-        switch(lookahead){
-        case '+' : case '-':
-            t = lookahead;
-            match(lookahead); term(); emit(t, NONE);
-            continue;
-        default : 
-            return;
-        }
+void term (){
+  factor(); morefactors();
 }
 
-term(){
+void morefactors(){
     int t;
-    factor();
-    while(1){
-        switch(lookahead){
-        case '*' : case '/' : case DIV : case MOD : case '%':
-            t = lookahead;
-            match(lookahead); factor(); emit(t, NONE);
-            continue;
-
+    t = lookahead;
+    switch(lookahead){
+        case '*': case '/' : case DIV : case MOD : case '%': 
+            match(t); factor(); emit(t, tokenval); morefactors();
         default:
-            return;
-        }
+            /* Epsilon */
     }
 }
 
