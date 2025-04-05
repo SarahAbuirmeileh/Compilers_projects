@@ -1,5 +1,3 @@
-/* Global */
-
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h> /* To provide a declaration of ‘exit’ */
@@ -14,23 +12,56 @@
 #define ID 259
 #define DONE 260
 
+#define STRMAX 999 /* Size of lexemes array*/
+#define SYMAX 100 /* Size of symtable */
+
 int tokenval; /* Value of token attribute */
 int lineno;
-
-struct entry{  /* From of symbol table entry */
-    char *lexptr;
-    int token;
-};
-
-struct entry symtable[]; /* Symbol table*/
-
-
-/* Lexer*/
+int lookahead;
 
 char lexbuf[BSIZE];
 int lineno = 1;
 int tokenval = NONE;
 
+struct entry{  /* From of symbol table entry */
+    char *lexptr;
+    int token;
+};    
+
+struct entry symtable[]; /* Symbol table*/
+struct entry keywords[] = {
+    "div", DIV,
+    "mod", MOD,
+    0, 0
+};
+
+char lexemes[STRMAX];
+int lastchar = -1; /* Last used position in lexemes*/
+
+struct entry symtable[SYMAX];
+int lastentry = 0; /* Last used position in symtable*/
+
+// Functions prototypes
+int lexan();
+parse();
+expr();
+term();
+factor();
+match(int t);
+emit(int t, int tval);
+int lookup(char s[]);
+int insert(char s[], int tok);
+init();
+error(char *m);
+
+/* Main */
+main(){
+    init();
+    parse();
+    exit(0); /* Successful termination */
+}
+
+/* Lexer*/
 int lexan(){ /* Lexical Analyzer*/
     int t;
     while (1){
@@ -77,9 +108,6 @@ int lexan(){ /* Lexical Analyzer*/
 }
 
 /* Parser */
-
-int lookahead;
-
 parse(){ /* parser and translate expression list*/
     lookahead = lexan();
     while(lookahead != DONE){
@@ -138,8 +166,6 @@ match(int t) {
 }
 
 /* Emitter */
-
-
 emit(int t, int tval){
     switch(t){
         case '+' : case '-' : case '*' : case '/':
@@ -158,16 +184,6 @@ emit(int t, int tval){
 }
 
 /* Symbol */
-
-
-#define STRMAX 999 /* Size of lexemes array*/
-#define SYMAX 100 /* Size of symtable */
-
-char lexemes[STRMAX];
-int lastchar = -1; /* Last used position in lexemes*/
-struct entry symtable[SYMAX];
-int lastentry = 0; /* Last used position in symtable*/
-
 int lookup(char s[]){
     int p;
     for(p = lastentry; p > 0; p = p - 1)
@@ -196,32 +212,14 @@ int insert(char s[], int tok){
 }
 
 /* Init */
-
-
-struct entry keywords[] = {
-    "div", DIV,
-    "mod", MOD,
-    0, 0
-};
-
 init(){ /* Loads keywords into symtable*/
     struct entry *p;
     for(p = keywords; p->token; p++)
         insert(p->lexptr, p->token);
 }
 
-
 /* Error */
-
 error(char *m){
     fprintf(stderr, "line %d: %s\n", lineno, m);
     exit(1); /* Unsuccessful termination */
-}
-
-/* Main */
-
-main(){
-    init();
-    parse();
-    exit(0); /* Successful termination */
 }
