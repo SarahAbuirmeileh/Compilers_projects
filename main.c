@@ -134,7 +134,7 @@ term(){
     factor();
     while(1){
         switch(lookahead){
-        case '*' : case '/' : case DIV : case MOD:
+        case '*' : case '/' : case DIV : case MOD : case '%':
             t = lookahead;
             match(lookahead); factor(); emit(t, NONE);
             continue;
@@ -168,7 +168,7 @@ match(int t) {
 /* Emitter */
 emit(int t, int tval){
     switch(t){
-        case '+' : case '-' : case '*' : case '/':
+        case '+' : case '-' : case '*' : case '/': case '%':
             printf("%c\n", t); break;
         case DIV:
             printf("DIV\n"); break;
