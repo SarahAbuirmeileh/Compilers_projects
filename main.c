@@ -12,6 +12,9 @@
 #define MOD 258
 #define ID 259
 #define DONE 260
+#define INPUT 261
+#define OUTPUT 262
+#define PROGRAM 263
 
 #define STRMAX 999 /* Size of lexemes array*/
 #define SYMAX 100 /* Size of symtable */
@@ -33,7 +36,10 @@ struct entry symtable[]; /* Symbol table*/
 struct entry keywords[] = {
     "div", DIV,
     "mod", MOD,
-    0, 0
+    "input", INPUT,
+    "output", OUTPUT,
+    "program", PROGRAM,
+    0, 0,
 };
 
 char lexemes[STRMAX];
@@ -75,6 +81,12 @@ int lexan(){ /* Lexical Analyzer*/
             ; /* Strip out white space*/
         else if (t == '\n')
             lineno = lineno + 1;
+        else if (t == '#') {
+            while ((t = getchar()) != '\n')
+                ; /* Strip out comments (whole line)*/
+            lineno = lineno + 1;
+        }
+       
         else if (isdigit(t)){
             ungetc(t, stdin);
             scanf("%d", &tokenval);
@@ -118,8 +130,22 @@ void parse(){ /* parser and translate expression list*/
     start();
 }
 
-void start(){
-    list(); match(DONE);
+void start() {
+    if (lookahead == PROGRAM){
+        match(PROGRAM);
+        match(ID);
+        match('(');
+        match(INPUT);
+        match(',');
+        match(OUTPUT);
+        match(')');
+        match('{');
+        list();
+        match('}');
+        match(DONE);
+    } else {
+        error("Syntax Error");
+    }
 }
 
 void list(){
