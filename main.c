@@ -42,17 +42,17 @@ struct entry symtable[SYMAX];
 int lastentry = 0; /* Last used position in symtable*/
 
 // Functions prototypes
-int lexan();
-parse();
-expr();
-term();
-factor();
-match(int t);
-emit(int t, int tval);
+int lexan(void);
+void parse(void);
+void expr(void);
+void term(void);
+void factor(void);
+void match(int t);
+void emit(int t, int tval);
 int lookup(char s[]);
 int insert(char s[], int tok);
-init();
-error(char *m);
+void init(void);
+void error(char *m);
 
 /* Main */
 main(){
