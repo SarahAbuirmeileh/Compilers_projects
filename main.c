@@ -66,10 +66,42 @@ void init(void);
 void error(char *m);
 
 /* Main */
-int main(int argc, char *argv[]){
-    init();
-    parse();
-    exit(0); /* Successful termination */
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <inputfile> <outputfile>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *infile = fopen(argv[1], "r");
+    if (!infile) {
+        perror("Error while opening the input file");
+        return 1;
+    }
+
+    FILE *outfile = fopen(argv[2], "w");
+    if (!outfile) {
+        perror("Error while opening the output file");
+        fclose(infile);
+        return 1;
+    }
+
+    // Redirect stdin and stdout to read and write to the files
+    if (freopen(argv[1], "r", stdin) == NULL) {
+        perror("Failed to redirect stdin");
+        return 1;
+    }
+    if (freopen(argv[2], "w", stdout) == NULL) {
+        perror("Failed to redirect stdout");
+        return 1;
+    }
+
+    init();     // Load keywords into the symbol table
+    parse();    // Start parsing
+
+    fclose(infile);
+    fclose(outfile);
+
+    return 0; // Successful termination
 }
 
 /* Lexer*/
