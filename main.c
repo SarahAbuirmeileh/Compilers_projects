@@ -66,14 +66,14 @@ void init(void);
 void error(char *m);
 
 /* Main */
-main(){
+int main(int argc, char *argv[]){
     init();
     parse();
     exit(0); /* Successful termination */
 }
 
 /* Lexer*/
-int lexan(){ /* Lexical Analyzer*/
+int lexan(void) { /* Lexical Analyzer */
     int t;
     while (1){
         t = getchar();
@@ -86,51 +86,47 @@ int lexan(){ /* Lexical Analyzer*/
                 ; /* Strip out comments (whole line)*/
             lineno = lineno + 1;
         }
-       
         else if (isdigit(t)){
             ungetc(t, stdin);
             scanf("%d", &tokenval);
             return NUM;
-        }
-        else if(isalpha(t)){ /* t is a letter */
+        } else if (isalpha(t)) { /* t is a letter */
             int p, b = 0;
-            while(isalnum(t)){ /* t is alphanumeric*/
+            while (isalnum(t)) { /* t is alphanumeric */
                 lexbuf[b] = t;
                 t = getchar();
                 b = b + 1;
-                if(b >= BSIZE)
+                if (b >= BSIZE)
                     error("Compiler Error");
             }
 
             lexbuf[b] = EOS;
-            if(t != EOF)
+            if (t != EOF)
                 ungetc(t, stdin);
             p = lookup(lexbuf);
 
-            if(p == 0)
+            if (p == 0)
                 p = insert(lexbuf, ID);
 
             tokenval = p;
+            // printf("Token: %s, Type: %d\n", lexbuf, symtable[p].token); // Debug print
             return symtable[p].token;
             }
-
             else if (t == EOF)
                 return DONE;
-
             else{
                 tokenval = NONE;
                 return t;
             }
     }
 }
-
 /* Parser */
-void parse(){ /* parser and translate expression list*/
+void parse(void){ /* parser and translate expression list*/
     lookahead = lexan();
     start();
 }
 
-void start() {
+void start(void) {
     if (lookahead == PROGRAM){
         match(PROGRAM);
         match(ID);
@@ -148,7 +144,7 @@ void start() {
     }
 }
 
-void list(){
+void list(void){
   if (lookahead == '(' || lookahead == ID || lookahead == NUM) {
     expr(); match(';'); list();
   }
@@ -157,11 +153,11 @@ void list(){
   }
 }
 
-void expr (){
+void expr (void){
   term(); moreterms();
 }
 
-void moreterms(){
+void moreterms(void){
     int t;
     switch(lookahead){
     case '+' : case '-' : 
@@ -173,11 +169,11 @@ void moreterms(){
     }
 }
 
-void term (){
+void term (void){
   factor(); morefactors();
 }
 
-void morefactors(){
+void morefactors(void){
     int t;
     t = lookahead;
     switch(lookahead){
@@ -188,7 +184,7 @@ void morefactors(){
     }
 }
 
-factor(){
+void factor(void){
     switch(lookahead){
         case '(':
             match('('); expr(); match(')'); break;
@@ -201,7 +197,7 @@ factor(){
     }
 }
 
-match(int t) {
+void match(int t) {
     if(lookahead == t)
         lookahead = lexan();
     else        
@@ -209,7 +205,7 @@ match(int t) {
 }
 
 /* Emitter */
-emit(int t, int tval){
+void emit(int t, int tval){
     switch(t){
         case '+' : case '-' : case '*' : case '/': case '%':
             printf("%c\n", t); break;
@@ -255,14 +251,14 @@ int insert(char s[], int tok){
 }
 
 /* Init */
-init(){ /* Loads keywords into symtable*/
+void init(void){ /* Loads keywords into symtable*/
     struct entry *p;
     for(p = keywords; p->token; p++)
         insert(p->lexptr, p->token);
 }
 
 /* Error */
-error(char *m){
+void error(char *m){
     fprintf(stderr, "line %d: %s\n", lineno, m);
     exit(1); /* Unsuccessful termination */
 }
