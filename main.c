@@ -32,7 +32,7 @@ struct entry{  /* From of symbol table entry */
     int token;
 };    
 
-struct entry symtable[]; /* Symbol table*/
+// struct entry symtable[]; /* Symbol table*/
 struct entry keywords[] = {
     "div", DIV,
     "mod", MOD,
@@ -152,6 +152,7 @@ int lexan(void) { /* Lexical Analyzer */
             }
     }
 }
+
 /* Parser */
 void parse(void){ /* parser and translate expression list*/
     lookahead = lexan();
@@ -159,26 +160,48 @@ void parse(void){ /* parser and translate expression list*/
 }
 
 void start(void) {
-    if (lookahead == PROGRAM){
+    if (lookahead == PROGRAM) {
         match(PROGRAM);
-        match(ID);
-        match('(');
-        match(INPUT);
-        match(',');
-        match(OUTPUT);
-        match(')');
-        match('{');
-        list();
-        match('}');
-        match(DONE);
+        printf("program ");  // Corrected from "Program" to match keyword case
+
+        if(lookahead == ID){
+            emit(ID, tokenval);
+            match(ID);
+            match('(');
+            printf("(");
+    
+            match(INPUT);
+            printf("input");  // Don't printf a token like INPUT directly
+    
+            match(',');
+            printf(",");
+    
+            match(OUTPUT);
+            printf("output");
+    
+            match(')');
+            printf(")\n");
+    
+            match('{');
+            printf("{\n");
+    
+            list(); 
+    
+            match('}');
+            printf("}\n");
+    
+            match(DONE);  // Make sure DONE represents end of file/input
+        }else{
+            error("Syntax error: expected 'program'");
+        }
     } else {
-        error("Syntax Error");
+        error("Syntax error: expected 'program'");
     }
 }
 
 void list(void){
   if (lookahead == '(' || lookahead == ID || lookahead == NUM) {
-    expr(); match(';'); list();
+    expr(); match(';'); printf(";\n"); list();
   }
   else {
     /* Epsilon */
@@ -240,15 +263,15 @@ void match(int t) {
 void emit(int t, int tval){
     switch(t){
         case '+' : case '-' : case '*' : case '/': case '%':
-            printf("%c\n", t); break;
+            printf("%c ", t); break;
         case DIV:
-            printf("DIV\n"); break;
+            printf("DIV "); break;
         case MOD:
-            printf("MOD\n"); break;
+            printf("MOD "); break;
         case NUM:
-            printf("%d\n", tval); break;
+            printf("%d ", tval); break;
         case ID:
-            printf("%s\n", symtable[tval].lexptr); break;
+            printf("%s ", symtable[tval].lexptr); break;
         default:
             printf("token %d, tokenval %d\n", t, tval);
     }
