@@ -32,7 +32,7 @@ struct entry{  /* From of symbol table entry */
     int token;
 };    
 
-struct entry symtable[]; /* Symbol table*/
+// struct entry symtable[]; /* Symbol table*/
 struct entry keywords[] = {
     "div", DIV,
     "mod", MOD,
@@ -66,14 +66,46 @@ void init(void);
 void error(char *m);
 
 /* Main */
-main(){
-    init();
-    parse();
-    exit(0); /* Successful termination */
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <inputfile> <outputfile>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *infile = fopen(argv[1], "r");
+    if (!infile) {
+        perror("Error while opening the input file");
+        return 1;
+    }
+
+    FILE *outfile = fopen(argv[2], "w");
+    if (!outfile) {
+        perror("Error while opening the output file");
+        fclose(infile);
+        return 1;
+    }
+
+    // Redirect stdin and stdout to read and write to the files
+    if (freopen(argv[1], "r", stdin) == NULL) {
+        perror("Failed to redirect stdin");
+        return 1;
+    }
+    if (freopen(argv[2], "w", stdout) == NULL) {
+        perror("Failed to redirect stdout");
+        return 1;
+    }
+
+    init();     // Load keywords into the symbol table
+    parse();    // Start parsing
+
+    fclose(infile);
+    fclose(outfile);
+
+    return 0; // Successful termination
 }
 
 /* Lexer*/
-int lexan(){ /* Lexical Analyzer*/
+int lexan(void) { /* Lexical Analyzer */
     int t;
     while (1){
         t = getchar();
@@ -86,37 +118,34 @@ int lexan(){ /* Lexical Analyzer*/
                 ; /* Strip out comments (whole line)*/
             lineno = lineno + 1;
         }
-       
         else if (isdigit(t)){
             ungetc(t, stdin);
             scanf("%d", &tokenval);
             return NUM;
-        }
-        else if(isalpha(t)){ /* t is a letter */
+        } else if (isalpha(t)) { /* t is a letter */
             int p, b = 0;
-            while(isalnum(t)){ /* t is alphanumeric*/
+            while (isalnum(t)) { /* t is alphanumeric */
                 lexbuf[b] = t;
                 t = getchar();
                 b = b + 1;
-                if(b >= BSIZE)
+                if (b >= BSIZE)
                     error("Compiler Error");
             }
 
             lexbuf[b] = EOS;
-            if(t != EOF)
+            if (t != EOF)
                 ungetc(t, stdin);
             p = lookup(lexbuf);
 
-            if(p == 0)
+            if (p == 0)
                 p = insert(lexbuf, ID);
 
             tokenval = p;
+            // printf("Token: %s, Type: %d\n", lexbuf, symtable[p].token); // Debug print
             return symtable[p].token;
             }
-
             else if (t == EOF)
                 return DONE;
-
             else{
                 tokenval = NONE;
                 return t;
@@ -125,43 +154,65 @@ int lexan(){ /* Lexical Analyzer*/
 }
 
 /* Parser */
-void parse(){ /* parser and translate expression list*/
+void parse(void){ /* parser and translate expression list*/
     lookahead = lexan();
     start();
 }
 
-void start() {
-    if (lookahead == PROGRAM){
+void start(void) {
+    if (lookahead == PROGRAM) {
         match(PROGRAM);
-        match(ID);
-        match('(');
-        match(INPUT);
-        match(',');
-        match(OUTPUT);
-        match(')');
-        match('{');
-        list();
-        match('}');
-        match(DONE);
+        printf("program ");  // Corrected from "Program" to match keyword case
+
+        if(lookahead == ID){
+            emit(ID, tokenval);
+            match(ID);
+            match('(');
+            printf("(");
+    
+            match(INPUT);
+            printf("input");  // Don't printf a token like INPUT directly
+    
+            match(',');
+            printf(",");
+    
+            match(OUTPUT);
+            printf("output");
+    
+            match(')');
+            printf(")\n");
+    
+            match('{');
+            printf("{\n");
+    
+            list(); 
+    
+            match('}');
+            printf("}\n");
+    
+            match(DONE);  // Make sure DONE represents end of file/input
+        }else{
+            error("Syntax error: expected 'program'");
+        }
     } else {
-        error("Syntax Error");
+        error("Syntax error: expected 'program'");
     }
 }
 
-void list(){
+void list(void){
   if (lookahead == '(' || lookahead == ID || lookahead == NUM) {
-    expr(); match(';'); list();
+    expr(); match(';'); printf(";\n"); list();
   }
   else {
     /* Epsilon */
   }
 }
 
-void expr (){
+void expr (void){
   term(); moreterms();
 }
 
-void moreterms(){
+void moreterms(void){
     int t;
     switch(lookahead){
     case '+' : case '-' : 
@@ -173,11 +224,11 @@ void moreterms(){
     }
 }
 
-void term (){
+void term (void){
   factor(); morefactors();
 }
 
-void morefactors(){
+void morefactors(void){
     int t;
     t = lookahead;
     switch(lookahead){
@@ -188,7 +239,7 @@ void morefactors(){
     }
 }
 
-factor(){
+void factor(void){
     switch(lookahead){
         case '(':
             match('('); expr(); match(')'); break;
@@ -201,7 +252,7 @@ factor(){
     }
 }
 
-match(int t) {
+void match(int t) {
     if(lookahead == t)
         lookahead = lexan();
     else        
@@ -209,18 +260,18 @@ match(int t) {
 }
 
 /* Emitter */
-emit(int t, int tval){
+void emit(int t, int tval){
     switch(t){
         case '+' : case '-' : case '*' : case '/': case '%':
-            printf("%c\n", t); break;
+            printf("%c ", t); break;
         case DIV:
-            printf("DIV\n"); break;
+            printf("DIV "); break;
         case MOD:
-            printf("MOD\n"); break;
+            printf("MOD "); break;
         case NUM:
-            printf("%d\n", tval); break;
+            printf("%d ", tval); break;
         case ID:
-            printf("%s\n", symtable[tval].lexptr); break;
+            printf("%s ", symtable[tval].lexptr); break;
         default:
             printf("token %d, tokenval %d\n", t, tval);
     }
@@ -255,14 +306,14 @@ int insert(char s[], int tok){
 }
 
 /* Init */
-init(){ /* Loads keywords into symtable*/
+void init(void){ /* Loads keywords into symtable*/
     struct entry *p;
     for(p = keywords; p->token; p++)
         insert(p->lexptr, p->token);
 }
 
 /* Error */
-error(char *m){
+void error(char *m){
     fprintf(stderr, "line %d: %s\n", lineno, m);
     exit(1); /* Unsuccessful termination */
 }
