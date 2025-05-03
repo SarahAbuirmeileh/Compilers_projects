@@ -8,13 +8,29 @@
 #define EOS '\0'
 
 #define NUM 256
-#define DIV 257
-#define MOD 258
+#define VAR 257
+#define INTEGER 258
 #define ID 259
-#define DONE 260
-#define INPUT 261
-#define OUTPUT 262
-#define PROGRAM 263
+#define REAL 260
+#define DONE 261
+#define PROGRAM 262
+#define EOEX 263
+#define BEGIN 264
+#define END 265
+#define IF 266
+#define THEN 267
+#define REPEAT 268
+#define UNTIL 269
+#define ELSE 270
+#define RELOP 271
+#define ADDOP 272
+#define MULOP 273
+#define NOT 274
+#define INPUT 275
+#define OUTPUT 276
+#define ASSIGNOP 277
+#define WRITELN 278
+#define EOD 279 // end of declarations
 
 #define STRMAX 999 /* Size of lexemes array*/
 #define SYMAX 100 /* Size of symtable */
@@ -34,12 +50,26 @@ struct entry{  /* From of symbol table entry */
 
 // struct entry symtable[]; /* Symbol table*/
 struct entry keywords[] = {
-    "div", DIV,
-    "mod", MOD,
+    "program", PROGRAM,
     "input", INPUT,
     "output", OUTPUT,
-    "program", PROGRAM,
-    0, 0,
+    "var", VAR,
+    "integer", INTEGER,
+    "real", REAL,
+    "begin", BEGIN,
+    "end", END,
+    "if", IF,
+    "then", THEN,
+    "else", ELSE,
+    "repeat", REPEAT,
+    "until", UNTIL,
+    "writeln", WRITELN,
+    "OR", ADDOP,
+    "DIV", MULOP,
+    "MOD", MULOP,
+    "AND", MULOP,
+    "not", NOT,
+    0, 0
 };
 
 char lexemes[STRMAX];
@@ -232,8 +262,8 @@ void morefactors(void){
     int t;
     t = lookahead;
     switch(lookahead){
-        case '*': case '/' : case DIV : case MOD : case '%': 
-            match(t); factor(); emit(t, tokenval); morefactors();
+        // case '*': case '/' : case DIV : case MOD : case '%': 
+            // match(t); factor(); emit(t, tokenval); morefactors();
         default:
             /* Epsilon */
     }
@@ -261,20 +291,20 @@ void match(int t) {
 
 /* Emitter */
 void emit(int t, int tval){
-    switch(t){
-        case '+' : case '-' : case '*' : case '/': case '%':
-            printf("%c ", t); break;
-        case DIV:
-            printf("DIV "); break;
-        case MOD:
-            printf("MOD "); break;
-        case NUM:
-            printf("%d ", tval); break;
-        case ID:
-            printf("%s ", symtable[tval].lexptr); break;
-        default:
-            printf("token %d, tokenval %d\n", t, tval);
-    }
+    // switch(t){
+    //     case '+' : case '-' : case '*' : case '/': case '%':
+    //         printf("%c ", t); break;
+    //     case DIV:
+    //         printf("DIV "); break;
+    //     case MOD:
+    //         printf("MOD "); break;
+    //     case NUM:
+    //         printf("%d ", tval); break;
+    //     case ID:
+    //         printf("%s ", symtable[tval].lexptr); break;
+    //     default:
+    //         printf("token %d, tokenval %d\n", t, tval);
+    // }
 }
 
 /* Symbol */
