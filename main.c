@@ -30,7 +30,7 @@
 #define OUTPUT 276
 #define ASSIGNOP 277
 #define WRITELN 278
-#define EOD 279 // end of declarations
+// #define EOD 279 // end of declarations
 
 #define STRMAX 999 /* Size of lexemes array*/
 #define SYMAX 100 /* Size of symtable */
@@ -291,20 +291,89 @@ void match(int t) {
 
 /* Emitter */
 void emit(int t, int tval){
-    // switch(t){
-    //     case '+' : case '-' : case '*' : case '/': case '%':
-    //         printf("%c ", t); break;
-    //     case DIV:
-    //         printf("DIV "); break;
-    //     case MOD:
-    //         printf("MOD "); break;
-    //     case NUM:
-    //         printf("%d ", tval); break;
-    //     case ID:
-    //         printf("%s ", symtable[tval].lexptr); break;
-    //     default:
-    //         printf("token %d, tokenval %d\n", t, tval);
-    // }
+    switch(t){
+        // case '+' : case '-' : case '*' : case '/': case '%':
+        //     printf("%c ", t); break;
+        // case DIV:
+        //     printf("DIV "); break;
+        // case MOD:
+        //     printf("MOD "); break;
+        case PROGRAM:
+            printf("#include<stdio.h>\n"); break;
+        
+        // case 'm':
+        //     printf("%s\n", "int main(void)"); break;
+
+        case '(': case ')': case ';': case ',':
+            printf("%c", t); break;
+
+        case NUM:
+            printf("%d ", tval); break;
+
+        case BEGIN:
+            printf("{\n"); break;
+
+        case END:
+            printf("return 0;\n"); break;
+
+        case '.':
+            printf("}\n"); break;
+        
+        case ID:
+            printf("%s ", symtable[tval].lexptr); break;
+        
+        case ASSIGNOP:
+            printf("="); break;
+        
+        case RELOP:
+        
+            if (strcmp(symtable[tval].lexptr, "<>") == 0){
+                printf("%s ", "!="); break;
+            }else{
+                printf("%s ", symtable[tval].lexptr); break;
+            }
+
+        case MULOP: case ADDOP:
+            printf("%s ", symtable[tval].lexptr); break;
+        
+        case INTEGER:
+            printf("int "); break;
+        
+        case REAL:
+            printf("float "); break;
+        
+        case IF:
+            printf("if"); break;
+        
+        case THEN:
+            printf("\n"); break;
+        
+        case ELSE:
+            printf("else\n"); break;
+        
+        case NOT:
+            printf("!"); break;
+        
+        case REPEAT:
+            printf("do\n{\n"); break;
+    
+        case UNTIL:
+            printf("}\nwhile !"); break;
+            // printf("} while !");
+        
+        case WRITELN:
+            if (symtable[tval].token == INTEGER) {
+                printf("printf(\"%%d\\n\", %s);\n", symtable[tval].lexptr);
+            } else if (symtable[tval].token == REAL) {
+                printf("printf(\"%%f\\n\", %s);\n", symtable[tval].lexptr);
+            } else {
+                error("/* Unknown type for WRITELN */\n");
+            }
+            break;
+            
+        default:
+            printf("token %d, tokenval %d\n", t, tval);
+    }
 }
 
 /* Symbol */
