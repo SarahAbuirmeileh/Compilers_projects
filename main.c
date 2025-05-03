@@ -140,26 +140,70 @@ int lexan(void) { /* Lexical Analyzer */
     while (1){
         t = getchar();
         if (t == ' ' || t == '\t')
-            ; /* Strip out white space*/
+            ; /* Strip out white space */
         else if (t == '\n')
             lineno = lineno + 1;
-        else if (t == '#') {
-            while ((t = getchar()) != '\n')
-                ; /* Strip out comments (whole line)*/
-            lineno = lineno + 1;
-        }
-        else if (isdigit(t)){
-            ungetc(t, stdin);
-            scanf("%d", &tokenval);
+        // else if (t == '#') {
+        //     while ((t = getchar()) != '\n')
+        //         ; /* Strip out comments (whole line) */
+        //     lineno = lineno + 1;
+        // }
+        else if (isdigit(t)) {
+            int b = 0;
+            lexbuf[b++] = t;
+            t = getchar();
+
+            // Integer part
+            while (isdigit(t)) {
+                if (b >= BSIZE) error("Compiler Error");
+                lexbuf[b++] = t;
+                t = getchar();
+            }
+
+            // Fractional part
+            if (t == '.') {
+                lexbuf[b++] = t;
+                t = getchar();
+                if (!isdigit(t)) {
+                    error("Invalid number format");
+                }
+                while (isdigit(t)) {
+                    if (b >= BSIZE) error("Compiler Error");
+                    lexbuf[b++] = t;
+                    t = getchar();
+                }
+            }
+
+            // Exponent part
+            if (t == 'e' || t == 'E') {
+                lexbuf[b++] = t;
+                t = getchar();
+                if (t == '+' || t == '-') {
+                    lexbuf[b++] = t;
+                    t = getchar();
+                }
+                if (!isdigit(t)) {
+                    error("Invalid exponent format");
+                }
+                while (isdigit(t)) {
+                    if (b >= BSIZE) error("Compiler Error");
+                    lexbuf[b++] = t;
+                    t = getchar();
+                }
+            }
+
+            lexbuf[b] = EOS;
+            if (t != EOF)
+                ungetc(t, stdin);
+            tokenval = NONE;
             return NUM;
         } else if (isalpha(t)) { /* t is a letter */
             int p, b = 0;
             while (isalnum(t)) { /* t is alphanumeric */
-                lexbuf[b] = t;
-                t = getchar();
-                b = b + 1;
                 if (b >= BSIZE)
                     error("Compiler Error");
+                lexbuf[b++] = tolower(t); // convert to lowercase
+                t = getchar();
             }
 
             lexbuf[b] = EOS;
@@ -173,13 +217,52 @@ int lexan(void) { /* Lexical Analyzer */
             tokenval = p;
             // printf("Token: %s, Type: %d\n", lexbuf, symtable[p].token); // Debug print
             return symtable[p].token;
-            }
-            else if (t == EOF)
-                return DONE;
-            else{
+        } else if (t == ':') {
+            t = getchar();
+            if (t == '=') {
                 tokenval = NONE;
-                return t;
+                return ASSIGNOP;
+            } else {
+                error("Invalid token ':'");
             }
+        } else if (t == '<') {
+            t = getchar();
+            if (t == '=') {
+                tokenval = NONE;
+                return RELOP;
+            } else if (t == '>') {
+                tokenval = NONE;
+                return RELOP;
+            } else {
+                if (t != EOF) ungetc(t, stdin);
+                tokenval = NONE;
+                return RELOP;
+            }
+        } else if (t == '>') {
+            t = getchar();
+            if (t == '=') {
+                tokenval = NONE;
+                return RELOP;
+            } else {
+                if (t != EOF) ungetc(t, stdin);
+                tokenval = NONE;
+                return RELOP;
+            }
+        } else if (t == '=') {
+            tokenval = NONE;
+            return RELOP;
+        } else if (t == '+' || t == '-') {
+            tokenval = NONE;
+            return ADDOP;
+        } else if (t == '*' || t == '/') {
+            tokenval = NONE;
+            return MULOP;
+        } else if (t == EOF)
+            return DONE;
+        else {
+            tokenval = NONE;
+            return t;
+        }
     }
 }
 
@@ -370,7 +453,7 @@ void emit(int t, int tval){
                 error("/* Unknown type for WRITELN */\n");
             }
             break;
-            
+
         default:
             printf("token %d, tokenval %d\n", t, tval);
     }
