@@ -1,0 +1,116 @@
+# Grammar After Removing Ambiguity 
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ;
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclarations VariableDeclaration | VariableDeclaration
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> IdentifierList , id | id
+Type -> integer | real
+
+Block -> begin Statements end
+Statements -> Statements ; Statement | Statement
+Statement -> MatchedStatement | UnmatchedStatement
+
+MatchedStatement -> id := Expression
+                  | Block
+                  | if Expression then MatchedStatement else MatchedStatement
+                  | repeat Statement until Expression
+                  | writeln(SimpleExpression)
+UnmatchedStatement -> if Expression then Statement
+                    | if Expression then MatchedStatement else UnmatchedStatement
+
+ExpressionList -> ExpressionList , Expression | Expression
+Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
+SimpleExpression -> SimpleExpression addop Term | addop Term | Term
+Term -> Term mulop Factor | Factor
+Factor -> id | num | ( Expression ) | not Factor
+
+*************************************************************************************************
+
+# Grammar After Removing Left Recursion
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ;
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclaration R1
+R1 -> VariableDeclaration R1 | <epsilon>
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> id R2
+R2 -> , id R2 | <epsilon>
+Type -> integer | real
+
+Block -> begin Statements end
+Statements -> Statement R3 
+R3 -> ; Statement R3 | <epsilon>
+Statement -> MatchedStatement | UnmatchedStatement
+
+MatchedStatement -> id := Expression
+                  | Block
+                  | if Expression then MatchedStatement else MatchedStatement
+                  | repeat Statement until Expression
+                  | writeln(SimpleExpression)
+                  
+UnmatchedStatement -> if Expression then Statement
+                    | if Expression then MatchedStatement else UnmatchedStatement
+
+ExpressionList -> Expression R4
+R4 -> , Expression R4 | <epsilon>
+Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
+
+trivialCase -> addop Term | Term
+SimpleExpression -> trivialCase | R5
+R5 -> addop Term R5 | <epsilon>
+
+Term -> Factor R6
+R6 -> mulop Factor R6 | <epsilon>
+Factor -> id | num | ( Expression ) | not Factor
+
+******************************************************************************************************
+
+# Grammar After Left Factoring
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ;
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclaration R1
+R1 -> VariableDeclaration R1 | <epsilon>
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> id R2
+R2 -> , id R2 | <epsilon>
+Type -> integer | real
+
+Block -> begin Statements end
+Statements -> Statement R3 
+R3 -> ; Statement R3 | <epsilon>
+Statement -> MatchedStatement | UnmatchedStatement
+
+MatchedStatement -> id := Expression
+                  | Block
+                  | if Expression then MatchedStatement else MatchedStatement
+                  | repeat Statement until Expression
+                  | writeln(SimpleExpression)
+
+UnmatchedStatement -> if A1
+A1 -> Expression A2
+A2 -> then A3
+A3 -> Statement | MatchedStatement else UnmatchedStatement
+
+ExpressionList -> Expression R4
+R4 -> , Expression R4 | <epsilon>
+Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
+
+trivialCase -> addop Term | Term
+SimpleExpression -> trivialCase | R5
+R5 -> addop Term R5 | <epsilon>
+
+Term -> Factor R6
+R6 -> mulop Factor R6 | <epsilon>
+Factor -> id | num | ( Expression ) | not Factor
+
+******************************************************************************************************
+
+
