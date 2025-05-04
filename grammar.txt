@@ -60,8 +60,8 @@ ExpressionList -> Expression R4
 R4 -> , Expression R4 | <epsilon>
 Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
 
-trivialCase -> addop Term | Term
-SimpleExpression -> trivialCase | R5
+TrivialCase -> addop Term | Term
+SimpleExpression -> TrivialCase | R5
 R5 -> addop Term R5 | <epsilon>
 
 Term -> Factor R6
@@ -101,10 +101,11 @@ A3 -> Statement | MatchedStatement else UnmatchedStatement
 
 ExpressionList -> Expression R4
 R4 -> , Expression R4 | <epsilon>
-Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
+Expression -> SimpleExpression A4
+A4 -> relop SimpleExpression  | <epsilon>
 
-trivialCase -> addop Term | Term
-SimpleExpression -> trivialCase | R5
+TrivialCase -> addop Term | Term
+SimpleExpression -> TrivialCase | R5
 R5 -> addop Term R5 | <epsilon>
 
 Term -> Factor R6

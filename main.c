@@ -81,13 +81,40 @@ int lastentry = 0; /* Last used position in symtable*/
 // Functions prototypes
 int lexan(void);
 void parse(void);
-void start(void);
-void list(void);
-void expr(void);
-void term(void);
-void moreterms(void);
-void factor(void);
-void morefactors(void);
+// void start(void);
+// void list(void);
+// void expr(void);
+// void term(void);
+// void moreterms(void);
+// void factor(void);
+// void morefactors(void);
+void program(void);
+void header(void);
+void declarations(void);
+void variableDeclarations(void);
+void r1 (void);
+void variableDeclaration (void);
+void identifierList (void);
+void r2 (void);
+void type (void);
+void block (void);
+void statements (void);
+void r3 (void);
+void statement (void);
+void matchedStatement (void);
+void unmatchedStatement (void);
+void a1 (void);
+void a2 (void);
+void a3 (void);
+void expressionList (void);
+void r4 (void);
+void expression (void);
+void trivialCase (void);
+void simpleExpression (void);
+void r5 (void);
+void term (void);
+void r6 (void);
+void factor();
 void match(int t);
 void emit(int t, int tval);
 int lookup(char s[]);
@@ -269,99 +296,234 @@ int lexan(void) { /* Lexical Analyzer */
 /* Parser */
 void parse(void){ /* parser and translate expression list*/
     lookahead = lexan();
-    start();
+    program();
 }
 
-void start(void) {
-    if (lookahead == PROGRAM) {
-        match(PROGRAM);
-        printf("program ");  // Corrected from "Program" to match keyword case
+void program(void) {
+    header(); declarations(); 
+    emit('m',NONE);
+    block(); match('.');
+}
 
-        if(lookahead == ID){
-            emit(ID, tokenval);
-            match(ID);
-            match('(');
-            printf("(");
-    
-            match(INPUT);
-            printf("input");  // Don't printf a token like INPUT directly
-    
-            match(',');
-            printf(",");
-    
-            match(OUTPUT);
-            printf("output");
-    
-            match(')');
-            printf(")\n");
-    
-            match('{');
-            printf("{\n");
-    
-            list(); 
-    
-            match('}');
-            printf("}\n");
-    
-            match(DONE);  // Make sure DONE represents end of file/input
-        }else{
-            error("Syntax error: expected 'program'");
-        }
-    } else {
-        error("Syntax error: expected 'program'");
+void header(void) {
+    int t = lookahead;
+    match(PROGRAM);
+    emit(PROGRAM, NONE);
+    match(ID); 
+    match('('); 
+    match(INPUT); 
+    match(','); 
+    match(OUTPUT);  
+    match(')');  
+    match(';');  
+}
+
+void declarations(void) {
+    match(VAR);  
+    // emit(VAR, tokenval);
+    variableDeclarations();
+    // TODO: <epsilon> 
+}
+
+void variableDeclarations(void) {
+    variableDeclaration();
+    r1();
+    // TODO: <epsilon> 
+}
+
+void r1 (void){
+    variableDeclaration();
+    r1();
+    // TODO: <epsilon> 
+}
+
+void variableDeclaration (void){
+    identifierList();
+    match(":");
+    emit(":", tokenval);
+
+    type();
+
+    match(";");
+    emit(";", tokenval);
+}
+
+void identifierList (void){
+    match(ID);
+    emit(ID, tokenval);
+    r2();
+}
+
+void r2 (void){
+    match(",");
+    emit(',', tokenval);
+
+    match(ID);
+    emit(ID, tokenval);
+
+    r2();
+    // TODO: <epsilon> 
+}
+
+void type (void){
+    int t;
+    switch (lookahead){
+        case INTEGER:
+            match(INTEGER);
+            emit(INTEGER, tokenval);
+            break;
+        case REAL:
+            match(REAL);
+            emit(REAL, tokenval);
+            break;
+        default:
+            return;
     }
 }
 
-void list(void){
-  if (lookahead == '(' || lookahead == ID || lookahead == NUM) {
-    expr(); match(';'); printf(";\n"); list();
-  }
-  else {
-    /* Epsilon */
-  }
+
+void block (void){
+    match(BEGIN);
+    emit(BEGIN, tokenval);
+    
+    statements();
+
+    match(END);
+    emit(END, tokenval);
+
 }
 
-void expr (void){
-  term(); moreterms();
+void statements (void){
+    statement();
+    r3();
 }
 
-void moreterms(void){
-    int t;
-    switch(lookahead){
-    case '+' : case '-' : 
-        t = lookahead;
-        match(lookahead); term(); emit(t, tokenval); moreterms(); break;
+void r3 (void){
+    match(';');
+    emit(';', tokenval);
+    statement();
+    r3();
+    // TODO: <epsilon> 
+}
 
-    default:
-        return;
+void statement (void){
+    matchedStatement();
+    // TODO: Should be or
+    unmatchedStatement();
+}
+
+void matchedStatement (void){
+    switch (lookahead){
+        case ID:
+            emit(ID, tokenval); match(ID);
+            emit(ASSIGNOP, tokenval); match(ASSIGNOP);
+            expression(); break;
+        case BEGIN:
+            block(); break;
+        case IF:
+            match(IF); emit(IF, tokenval); emit('(',tokenval); expression(); emit(')',tokenval);
+            match(THEN); emit(THEN, tokenval); matchedStatement(); match(ELSE); emit(ELSE, tokenval); matchedStatement(); break;
+        case REPEAT:
+            match(REPEAT); emit(REPEAT, tokenval); statement(); match(UNTIL); emit(UNTIL, tokenval); emit('(', tokenval); expression(); emit(')', tokenval); break;
+        case WRITELN:
+            match(WRITELN); emit(WRITELN, tokenval); match('('); emit('(', tokenval); simpleExpression(); match(')'); emit(')', tokenval); 
+        default:
+            return;
+    }
+}
+
+void unmatchedStatement (void){
+    match(IF); emit(IF, tokenval); a1();
+}
+
+void a1 (void){
+    expression(); a2();
+}
+
+void a2 (void){
+    match(THEN); emit(THEN, tokenval); a3();
+}
+
+void a3 (void){
+    statement();
+    // TODO: or
+    matchedStatement(); match(ELSE); emit(ELSE, tokenval); unmatchedStatement();
+}
+
+void expressionList (void){
+    expression();
+    r4();
+}
+
+void r4 (void){
+    match(','); emit(',', tokenval); expression(); r4();
+    // TODO: <epsilon> 
+}
+
+void expression (void){
+    SimpleExpression();
+}
+
+void a4 (void){
+    if(tokenval == RELOP){ // TODO: To be checked later (tokenval / lookahead)
+        match(RELOP); emit(RELOP, tokenval); 
+    }else{
+        // TODO: <epsilon> 
+    }
+}
+
+void trivialCase (void){
+    if(tokenval == RELOP){ // TODO: To be checked later (tokenval / lookahead)
+        match(RELOP); emit(RELOP, tokenval); 
+        term();
+    }else{
+        term();
+    } 
+}
+
+void simpleExpression (void){
+    if (tokenval == RELOP){
+        trivialCase();
+    }else{
+        r5();
+    }
+}
+
+void r5 (void){
+    if (tokenval == RELOP){
+        match(RELOP); emit(RELOP, tokenval);  term(); r5();
+    }else{
+        // TODO: <epsilon> 
     }
 }
 
 void term (void){
-  factor(); morefactors();
+    factor();
+    r6();
 }
 
-void morefactors(void){
-    int t;
-    t = lookahead;
-    switch(lookahead){
-        // case '*': case '/' : case DIV : case MOD : case '%': 
-            // match(t); factor(); emit(t, tokenval); morefactors();
-        default:
-            /* Epsilon */
+void r6 (void){
+    if (tokenval == MULOP){
+        match(RELOP); emit(RELOP, tokenval);  factor(); r6();
+    }else{
+        // TODO: <epsilon> 
     }
 }
 
-void factor(void){
-    switch(lookahead){
-        case '(':
-            match('('); expr(); match(')'); break;
-        case NUM:
-            emit(NUM, tokenval); match(NUM); break;
+void factor (void){
+    switch (lookahead){
         case ID:
-            emit(ID, tokenval); match(ID); break;
+            emit(ID, tokenval); match(ID);break;
+        case NUM:
+            emit(NUM, tokenval); match(NUM);break;
+        case '(':
+            emit('(', tokenval); match('(');
+            expression();
+            emit(')', tokenval);match(')'); break;
+        case NOT:
+            emit(NOT, tokenval); match(NOT); factor(); break;
         default:
-            error("Syntax Error");
+            return;
     }
 }
 
@@ -384,8 +546,8 @@ void emit(int t, int tval){
         case PROGRAM:
             printf("#include<stdio.h>\n"); break;
         
-        // case 'm':
-        //     printf("%s\n", "int main(void)"); break;
+        case 'm':
+            printf("%s\n", "int main(void)"); break;
 
         case '(': case ')': case ';': case ',':
             printf("%c", t); break;
