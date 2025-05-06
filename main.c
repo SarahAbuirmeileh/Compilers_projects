@@ -40,9 +40,8 @@ int lineno;
 int lookahead;
 int is_main_block = 0;
 
-#define IDMAX 100
-char* idlist[IDMAX];
-int idcount = 0;
+char current_ids[SYMAX][BSIZE]; // to hold variable names temporarily
+int current_id_count = 0;
 
 char lexbuf[BSIZE];
 int lineno = 1;
@@ -345,59 +344,61 @@ void moreVariableDeclarations (void){
     }
 }
 
-void variableDeclaration(void){
-    idcount = 0;
+void variableDeclaration (void){
     identifierList();
-    match(EOD);
-
-    int declared_type = lookahead;
-    type(); // consumes INTEGER or REAL
-
-    // Emit collected ids now
-    if (declared_type == INTEGER) {
-        printf("int ");
-    } else if (declared_type == REAL) {
-        printf("float ");
-    }
-
-    for (int i = 0; i < idcount; i++) {
-        printf("%s", idlist[i]);
-        if (i < idcount - 1) printf(", ");
-    }
-    printf(";\n");
-
-    match(';');
+    match(EOD); 
+    
+    type();
+    match(';'); 
 }
 
-void identifierList(void){
+void identifierList(void) {
     if (lookahead == ID) {
-        idlist[idcount++] = symtable[tokenval].lexptr;
+        strcpy(current_ids[current_id_count++], symtable[tokenval].lexptr);
         match(ID);
-    }
-    moreIdList();
-}
-
-void moreIdList(void){
-    if (lookahead == ',') {
-        match(','); 
-        if (lookahead == ID) {
-            idlist[idcount++] = symtable[tokenval].lexptr;
-            match(ID);
-        }
         moreIdList();
+    } else {
+        error("Expected identifier");
     }
 }
 
-void type (void){
-    switch (lookahead){
-        case INTEGER:
-            match(INTEGER);
-            break;
-        case REAL:
+void moreIdList(void) {
+    if (lookahead == ',') {
+        match(',');
+        if (lookahead == ID) {
+            strcpy(current_ids[current_id_count++], symtable[tokenval].lexptr);
+            match(ID);
+            moreIdList();
+        } else {
+            error("Expected identifier after ','");
+        }
+    }else{
+        // <epsilon>
+    }
+}
+
+void type(void){
+    if (lookahead == INTEGER || lookahead == REAL) {
+        if (lookahead == INTEGER) {
+            match(INTEGER); emit(INTEGER, tokenval);
+        } else {
             match(REAL);
-            break;
-        default:
-            return;
+            emit(REAL, tokenval);
+        }
+
+        for (int i = 0; i < current_id_count; ++i) {
+            int tval = lookup(current_ids[i]);
+            if (tval == 0) tval = insert(current_ids[i], ID);
+            emit(ID, tval); 
+            if (i < current_id_count - 1) {
+                emit(',', tokenval);
+            }
+        }
+        emit(';', tokenval); printf("\n");
+
+        current_id_count = 0; // Reset for the next declaration
+    } else {
+        error("Expected type 'integer' or 'real' ");
     }
 }
 
@@ -605,8 +606,8 @@ void emit(int t, int tval){
             // printf("return 0;\n"); break;
         
         case ID:
-            printf("%s ", symtable[tval].lexptr); break;
-        
+            printf("%s", symtable[tval].lexptr); break;
+
         case 'i': // i for id
             printf("%c", tval); break;
         
