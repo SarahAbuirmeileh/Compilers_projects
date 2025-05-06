@@ -90,10 +90,10 @@ void program(void);
 void header(void);
 void declarations(void);
 void variableDeclarations(void);
-void r1 (void);
+void moreVariableDeclarations (void);
 void variableDeclaration (void);
 void identifierList (void);
-void r2 (void);
+void moreIdList (void);
 void type (void);
 void block (void);
 void statements (void);
@@ -333,49 +333,68 @@ void declarations(void) {
 
 void variableDeclarations(void) {
     variableDeclaration();
-    r1();
+    moreVariableDeclarations();
 }
 
-void r1 (void){
+void moreVariableDeclarations (void){
     if(lookahead == ID){
         variableDeclaration();
-        r1();        
+        moreVariableDeclarations();        
     }else{
         // <epsilon> 
     }
 }
 
-void variableDeclaration (void){
+void variableDeclaration(void){
+    idcount = 0;
     identifierList();
-    match(EOD); emit(EOD, tokenval);
+    match(EOD);
 
-    type();
+    int declared_type = lookahead;
+    type(); // consumes INTEGER or REAL
 
-    match(';'); emit(';', tokenval);
+    // Emit collected ids now
+    if (declared_type == INTEGER) {
+        printf("int ");
+    } else if (declared_type == REAL) {
+        printf("float ");
+    }
+
+    for (int i = 0; i < idcount; i++) {
+        printf("%s", idlist[i]);
+        if (i < idcount - 1) printf(", ");
+    }
+    printf(";\n");
+
+    match(';');
 }
 
-void identifierList (void){
-    match(ID); emit(ID, tokenval);
-    r2();
+void identifierList(void){
+    if (lookahead == ID) {
+        idlist[idcount++] = symtable[tokenval].lexptr;
+        match(ID);
+    }
+    moreIdList();
 }
 
-void r2 (void){
-    if(lookahead == ','){
-        match(','); emit(',', tokenval);
-        match(ID); emit(ID, tokenval);
-        r2();
-    }else{
-        // <epsilon> 
+void moreIdList(void){
+    if (lookahead == ',') {
+        match(','); 
+        if (lookahead == ID) {
+            idlist[idcount++] = symtable[tokenval].lexptr;
+            match(ID);
+        }
+        moreIdList();
     }
 }
 
 void type (void){
     switch (lookahead){
         case INTEGER:
-            match(INTEGER); emit(INTEGER, tokenval);
+            match(INTEGER);
             break;
         case REAL:
-            match(REAL); emit(REAL, tokenval);
+            match(REAL);
             break;
         default:
             return;

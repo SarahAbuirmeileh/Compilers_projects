@@ -38,8 +38,8 @@ VariableDeclarations -> VariableDeclaration R1
 R1 -> VariableDeclaration R1 | <epsilon>
 
 VariableDeclaration -> IdentifierList : Type ;
-IdentifierList -> id R2
-R2 -> , id R2 | <epsilon>
+IdentifierList -> id MoreIdList
+MoreIdList -> , id OtherIdIist | <epsilon>
 Type -> integer | real
 
 Block -> begin Statements end
@@ -75,12 +75,12 @@ Factor -> id | num | ( Expression ) | not Factor
 Program -> Header Declarations Block.
 Header -> program id (input, output) ;
 Declarations -> VAR VariableDeclarations | <epsilon>
-VariableDeclarations -> VariableDeclaration R1
-R1 -> VariableDeclaration R1 | <epsilon>
+VariableDeclarations -> VariableDeclaration MoreVariableDeclarations
+MoreVariableDeclarations -> VariableDeclaration MoreVariableDeclarations | <epsilon>
 
 VariableDeclaration -> IdentifierList : Type ;
-IdentifierList -> id R2
-R2 -> , id R2 | <epsilon>
+IdentifierList -> id OtherIdIist
+MoreIdList -> , id MoreIdList | <epsilon>
 Type -> integer | real
 
 Block -> begin Statements end
@@ -112,6 +112,4 @@ Term -> Factor R6
 R6 -> mulop Factor R6 | <epsilon>
 Factor -> id | num | ( Expression ) | not Factor
 
-OtherVariableDeclarations => r1
-OtherIdIist => r2
 ******************************************************************************************************
