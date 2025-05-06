@@ -52,7 +52,7 @@ MatchedStatement -> id := Expression
                   | if Expression then MatchedStatement else MatchedStatement
                   | repeat Statement until Expression
                   | writeln(SimpleExpression)
-                  
+
 UnmatchedStatement -> if Expression then Statement
                     | if Expression then MatchedStatement else UnmatchedStatement
 
@@ -61,7 +61,7 @@ R4 -> , Expression R4 | <epsilon>
 Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
 
 TrivialCase -> addop Term | Term
-SimpleExpression -> TrivialCase | R5
+SimpleExpression -> TrivialCase R5
 R5 -> addop Term R5 | <epsilon>
 
 Term -> Factor R6
@@ -105,13 +105,13 @@ Expression -> SimpleExpression A4
 A4 -> relop SimpleExpression  | <epsilon>
 
 TrivialCase -> addop Term | Term
-SimpleExpression -> TrivialCase | R5
+SimpleExpression -> TrivialCase  R5
 R5 -> addop Term R5 | <epsilon>
 
 Term -> Factor R6
 R6 -> mulop Factor R6 | <epsilon>
 Factor -> id | num | ( Expression ) | not Factor
 
+OtherVariableDeclarations => r1
+OtherIdIist => r2
 ******************************************************************************************************
-
-

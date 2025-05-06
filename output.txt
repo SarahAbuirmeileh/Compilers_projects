@@ -1,0 +1,7 @@
+#include<stdio.h>
+(null) ,(null) ,(null) token 279, tokenval 5
+int ;(null) ,(null) token 279, tokenval 6
+float ;int main(void)
+{
+return 0;
+}

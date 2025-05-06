@@ -1,0 +1,6 @@
+PROGRAM Example(Input, Output);
+VAR
+X,Y,Z: integer; A,B: real;
+BEGIN
+
+END.
