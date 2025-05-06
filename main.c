@@ -31,6 +31,16 @@
 #define ASSIGNOP 277
 #define WRITELN 278
 #define EOD 279 // end of declarations
+#define GT 280 
+#define GE 281 
+#define LT 282
+#define LE 283 
+#define EQ 284 
+#define NE 285 
+#define DIV 286 
+#define MOD 287 
+#define AND 288 
+#define OR 289
 
 #define STRMAX 999 /* Size of lexemes array*/
 #define SYMAX 100 /* Size of symtable */
@@ -162,6 +172,7 @@ int main(int argc, char *argv[]) {
 /* Lexer*/
 int lexan(void) { /* Lexical Analyzer */
     int t;
+    int token;
     while (1){
         t = getchar();
         if (t == ' ' || t == '\t')
@@ -174,54 +185,61 @@ int lexan(void) { /* Lexical Analyzer */
         //     lineno = lineno + 1;
         // }
         else if (isdigit(t)) {
-            int b = 0;
-            lexbuf[b++] = t;
-            t = getchar();
+            // TODO: READ number as required formate
+                // fprintf(stderr, "digit: %d\n", t-48);
 
-            // Integer part
-            while (isdigit(t)) {
-                if (b >= BSIZE) error("Compiler Error");
-                lexbuf[b++] = t;
-                t = getchar();
-            }
-
-            // Fractional part
-            if (t == '.') {
-                lexbuf[b++] = t;
-                t = getchar();
-                if (!isdigit(t)) {
-                    error("Invalid number format");
-                }
-                while (isdigit(t)) {
-                    if (b >= BSIZE) error("Compiler Error");
-                    lexbuf[b++] = t;
-                    t = getchar();
-                }
-            }
-
-            // Exponent part
-            if (t == 'e' || t == 'E') {
-                lexbuf[b++] = t;
-                t = getchar();
-                if (t == '+' || t == '-') {
-                    lexbuf[b++] = t;
-                    t = getchar();
-                }
-                if (!isdigit(t)) {
-                    error("Invalid exponent format");
-                }
-                while (isdigit(t)) {
-                    if (b >= BSIZE) error("Compiler Error");
-                    lexbuf[b++] = t;
-                    t = getchar();
-                }
-            }
-
-            lexbuf[b] = EOS;
-            if (t != EOF)
                 ungetc(t, stdin);
-            tokenval = NONE;
-            return NUM;
+                scanf("%d", &tokenval);
+                return NUM;
+            // fprintf(stderr, "NUM %d\n", t);
+            // int b = 0;
+            // lexbuf[b++] = t;
+            // t = getchar();
+
+            // // Integer part
+            // while (isdigit(t)) {
+            //     if (b >= BSIZE) error("Compiler Error");
+            //     lexbuf[b++] = t;
+            //     t = getchar();
+            // }
+
+            // // Fractional part
+            // if (t == '.') {
+            //     lexbuf[b++] = t;
+            //     t = getchar();
+            //     if (!isdigit(t)) {
+            //         error("Invalid number format");
+            //     }
+            //     while (isdigit(t)) {
+            //         if (b >= BSIZE) error("Compiler Error");
+            //         lexbuf[b++] = t;
+            //         t = getchar();
+            //     }
+            // }
+
+            // // Exponent part
+            // if (t == 'e' || t == 'E') {
+            //     lexbuf[b++] = t;
+            //     t = getchar();
+            //     if (t == '+' || t == '-') {
+            //         lexbuf[b++] = t;
+            //         t = getchar();
+            //     }
+            //     if (!isdigit(t)) {
+            //         error("Invalid exponent format");
+            //     }
+            //     while (isdigit(t)) {
+            //         if (b >= BSIZE) error("Compiler Error");
+            //         lexbuf[b++] = t;
+            //         t = getchar();
+            //     }
+            // }
+
+            // lexbuf[b] = EOS;
+            // if (t != EOF)
+            //     ungetc(t, stdin);
+            // tokenval = NONE;
+            // return NUM;
         } else if (isalpha(t)) { 
             int p, b = 0;
             while (isalnum(t)) { 
@@ -234,22 +252,36 @@ int lexan(void) { /* Lexical Analyzer */
             lexbuf[b] = EOS;
             if (t != EOF)
                 ungetc(t, stdin);
-            p = lookup(lexbuf);
 
-            if (p == 0)
-                p = insert(lexbuf, ID);
+            if (strcmp(lexbuf, "div") == 0){
+                tokenval = DIV;
+                token = MULOP;
+                p = lookup(lexbuf);
+            }else if (strcmp(lexbuf, "and") == 0){
+                tokenval = AND;
+                token = MULOP;
+            }else if (strcmp(lexbuf, "mod") == 0){
+                tokenval = MOD;
+                token = MULOP;
+            }else if (strcmp(lexbuf, "or") == 0){
+                tokenval = OR;
+                token = ADDOP;
+            }else{
+                p = lookup(lexbuf);
+                if (p == 0)
+                    p = insert(lexbuf, ID);
 
-            tokenval = p;
+                tokenval = p;
+                token = symtable[p].token;
+            }
             // printf("Token: %s, Type: %d\n", lexbuf, symtable[p].token); // Debug print
-            return symtable[p].token;
+            return token;
         } else if (t == ':') {
             t = getchar();
             if (t == '=') {
                 tokenval = NONE;
                 return ASSIGNOP;
             } else {
-                // TODO: if the : followed with = this it's assig. else it should br for declaration stat (VariableDeclaration -> IdentifierList : Type)
-                // should i give it tokenval ??? the same for , ????
                 if (t != EOF) ungetc(t, stdin);
                     tokenval = NONE;
                     return EOD; 
@@ -257,34 +289,34 @@ int lexan(void) { /* Lexical Analyzer */
         } else if (t == '<') {
             t = getchar();
             if (t == '=') {
-                tokenval = NONE;
+                tokenval = LE;
                 return RELOP;
             } else if (t == '>') {
-                tokenval = NONE;
+                tokenval = NE;
                 return RELOP;
             } else {
                 if (t != EOF) ungetc(t, stdin);
-                tokenval = NONE;
+                tokenval = LT;
                 return RELOP;
             }
         } else if (t == '>') {
             t = getchar();
             if (t == '=') {
-                tokenval = NONE;
+                tokenval = GE;
                 return RELOP;
             } else {
                 if (t != EOF) ungetc(t, stdin);
-                tokenval = NONE;
+                tokenval = GT;
                 return RELOP;
             }
         } else if (t == '=') {
-            tokenval = NONE;
+            tokenval = EQ;
             return RELOP;
         } else if (t == '+' || t == '-') {
-            tokenval = NONE;
+            tokenval = t;
             return ADDOP;
         } else if (t == '*' || t == '/') {
-            tokenval = NONE;
+            tokenval = t;
             return MULOP;
         } else if (t == EOF)
             return DONE;
@@ -338,7 +370,7 @@ void variableDeclarations(void) {
 void moreVariableDeclarations (void){
     if(lookahead == ID){
         variableDeclaration();
-        moreVariableDeclarations();        
+        moreVariableDeclarations();
     }else{
         // <epsilon> 
     }
@@ -394,7 +426,7 @@ void type(void){
                 emit(',', tokenval);
             }
         }
-        emit(';', tokenval); printf("\n");
+        emit(';', tokenval);
 
         current_id_count = 0; // Reset for the next declaration
     } else {
@@ -426,7 +458,7 @@ void statements (void){
 
 void r3 (void){
     if(lookahead == ';'){
-        match(';');
+        match(';'); 
         emit(';', tokenval);
         statement();
         r3();
@@ -461,6 +493,7 @@ void matchedStatement (void){
         default:
             return;
     }
+    
 }
 
 void unmatchedStatement (void){
@@ -502,20 +535,24 @@ void expression (void){
 }
 
 void a4 (void){
-    if(tokenval == RELOP){ // TODO: To be checked later (tokenval / lookahead)
-        match(RELOP); emit(RELOP, tokenval); 
+    if(lookahead == RELOP){ 
+        int tval = tokenval;
+        match(RELOP); emit(RELOP, tval); 
+
+        simpleExpression();
     }else{
         // <epsilon> 
     }
 }
 
 void trivialCase (void){
-    if(tokenval == RELOP){ // TODO: To be checked later (tokenval / lookahead)
-        match(RELOP); emit(RELOP, tokenval); 
+    if (lookahead == ADDOP) {
+        int tval = tokenval;
+        match(ADDOP); emit(ADDOP, tval); 
         term();
-    }else{
+    } else {
         term();
-    } 
+    }
 }
 
 void simpleExpression (void){
@@ -524,8 +561,9 @@ void simpleExpression (void){
 }
 
 void r5 (void){
-    if (tokenval == RELOP){  // TODO: To be checked later (tokenval / lookahead)
-        match(RELOP); emit(RELOP, tokenval);  
+    if (lookahead == ADDOP){  
+        int tval = tokenval;
+        match(ADDOP); emit(ADDOP, tval);  
         term(); r5();
     }else{
         // <epsilon> 
@@ -538,8 +576,9 @@ void term (void){
 }
 
 void r6 (void){
-    if (tokenval == MULOP){ // TODO: To be checked later (tokenval / lookahead)
-        match(MULOP); emit(MULOP, tokenval);  factor(); r6();
+    if (lookahead == MULOP){ 
+        int tval = tokenval;
+        match(MULOP); emit(MULOP, tval);  factor(); r6();
     }else{
         // <epsilon> 
     }
@@ -566,13 +605,8 @@ void match(int t) {
     if(lookahead == t)
         lookahead = lexan();
     else {
-        printf("\n\n\n");
-        printf("%d ", t);
-        printf("%d ", lookahead);
-        printf("\n\n\n");
         error("Syntax Error");
     }       
-        // printf(lookahead);
 }
 
 /* Emitter */
@@ -580,21 +614,21 @@ void emit(int t, int tval){
     switch(t){
         case '+' : case '-' : case '*' : case '/': case '%':
             printf("%c ", t); break;
-        // case DIV:
-        //     printf("DIV "); break;
-        // case MOD:
-        //     printf("MOD "); break;
+
         case PROGRAM:
             printf("#include<stdio.h>\n"); break;
         
         case 'm':
             printf("%s\n", "int main(void)"); break;
 
-        case '(': case ')': case ';': case ',':
+        case '(': case ')': case ',':
             printf("%c", t); break;
 
+        case ';':
+            printf("%c\n", t); break;
+
         case NUM:
-            printf("%d ", tval); break;
+            printf("%d", tval); break;
 
         case BEGIN:
             printf("{\n"); break;
@@ -602,28 +636,57 @@ void emit(int t, int tval){
         case END:
             printf("}\n"); break;
         
-        // case '.':
-            // printf("return 0;\n"); break;
-        
         case ID:
             printf("%s", symtable[tval].lexptr); break;
 
-        case 'i': // i for id
-            printf("%c", tval); break;
-        
         case ASSIGNOP:
             printf("="); break;
         
         case RELOP:
-        
-            if (strcmp(symtable[tval].lexptr, "<>") == 0){
-                printf("%s ", "!="); break;
-            }else{
-                printf("%s ", symtable[tval].lexptr); break;
+            switch (tval){
+                case LT:
+                    printf("<"); return;
+                case LE:
+                    printf("<="); return;
+                case GT:
+                    printf(">"); return;
+                case GE:
+                    printf(">="); return;
+                case EQ:
+                    printf("="); return;
+                case NE:
+                    printf("<>"); return;
+                
+                default: return;
             }
 
-        case MULOP: case ADDOP:
-            printf("%s ", symtable[tval].lexptr); break;
+        case MULOP: 
+            switch (tval){
+                case '*':
+                    printf("*"); return;
+                case '/':
+                    printf("/"); return;
+                case DIV:
+                    printf(" DIV "); return;
+                case MOD:
+                    printf(" MOD "); return;
+                case AND:
+                    printf(" AND "); return;
+                
+                default: return;
+            }
+        
+        case ADDOP:
+            switch (tval){
+                case '+':
+                    printf("+"); return;
+                case '-':
+                    printf("-"); return;
+                case OR:
+                    printf(" OR "); return;
+                
+                default: return;
+            }
         
         case INTEGER:
             printf("int "); break;
