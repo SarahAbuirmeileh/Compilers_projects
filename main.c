@@ -459,7 +459,6 @@ void statements (void){
 void r3 (void){
     if(lookahead == ';'){
         match(';'); 
-        emit(';', tokenval);
         statement();
         r3();
     }else{
@@ -468,18 +467,24 @@ void r3 (void){
 }
 
 void statement (void){
+    
     if(lookahead == IF){
         unmatchedStatement();
     }else{
         matchedStatement();
     }
+    // TODO: print ;\n after the last statement
+    emit(';', tokenval);
 }
 
 void matchedStatement (void){
     switch (lookahead){
         case ID:
-            emit(ID, tokenval); match(ID);
-            emit(ASSIGNOP, tokenval); match(ASSIGNOP);
+            int tval = tokenval;
+            match(ID); emit(ID, tval); 
+            tval = tokenval;
+            match(ASSIGNOP); emit(ASSIGNOP, tval); 
+
             expression(); break;
         case BEGIN:
             block(); break;
@@ -487,7 +492,7 @@ void matchedStatement (void){
             match(IF); emit(IF, tokenval); emit('(',tokenval); expression(); emit(')',tokenval);
             match(THEN); emit(THEN, tokenval); matchedStatement(); match(ELSE); emit(ELSE, tokenval); matchedStatement(); break;
         case REPEAT:
-            match(REPEAT); emit(REPEAT, tokenval); statement(); match(UNTIL); emit(UNTIL, tokenval); emit('(', tokenval); expression(); emit(')', tokenval); break;
+            match(REPEAT); emit(REPEAT, tokenval); statements(); match(UNTIL); emit(UNTIL, tokenval); emit('(', tokenval); expression(); emit(')', tokenval); break;
         case WRITELN:
             match(WRITELN); emit(WRITELN, tokenval); match('('); emit('(', tokenval); simpleExpression(); match(')'); emit(')', tokenval); 
         default:

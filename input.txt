@@ -2,5 +2,8 @@ PROGRAM Example(Input, Output);
 VAR
 X,Y,Z: integer; A,B: real;
 BEGIN
-Z:=X OR Y;
+REPEAT
+Z:=X-Y;
+Z:=X-Y
+UNTIL Z<0;
 END.
