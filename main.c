@@ -179,68 +179,59 @@ int lexan(void) { /* Lexical Analyzer */
             ; /* Strip out white space */
         else if (t == '\n')
             lineno = lineno + 1;
-        // else if (t == '#') {
-        //     while ((t = getchar()) != '\n')
-        //         ; /* Strip out comments (whole line) */
-        //     lineno = lineno + 1;
-        // }
-        else if (isdigit(t)) {
-            // TODO: READ number as required formate
-                // fprintf(stderr, "digit: %d\n", t-48);
-
-                ungetc(t, stdin);
-                scanf("%d", &tokenval);
-                return NUM;
-            // fprintf(stderr, "NUM %d\n", t);
-            // int b = 0;
-            // lexbuf[b++] = t;
-            // t = getchar();
-
-            // // Integer part
-            // while (isdigit(t)) {
-            //     if (b >= BSIZE) error("Compiler Error");
-            //     lexbuf[b++] = t;
-            //     t = getchar();
-            // }
-
-            // // Fractional part
-            // if (t == '.') {
-            //     lexbuf[b++] = t;
-            //     t = getchar();
-            //     if (!isdigit(t)) {
-            //         error("Invalid number format");
-            //     }
-            //     while (isdigit(t)) {
-            //         if (b >= BSIZE) error("Compiler Error");
-            //         lexbuf[b++] = t;
-            //         t = getchar();
-            //     }
-            // }
-
-            // // Exponent part
-            // if (t == 'e' || t == 'E') {
-            //     lexbuf[b++] = t;
-            //     t = getchar();
-            //     if (t == '+' || t == '-') {
-            //         lexbuf[b++] = t;
-            //         t = getchar();
-            //     }
-            //     if (!isdigit(t)) {
-            //         error("Invalid exponent format");
-            //     }
-            //     while (isdigit(t)) {
-            //         if (b >= BSIZE) error("Compiler Error");
-            //         lexbuf[b++] = t;
-            //         t = getchar();
-            //     }
-            // }
-
-            // lexbuf[b] = EOS;
-            // if (t != EOF)
-            //     ungetc(t, stdin);
-            // tokenval = NONE;
-            // return NUM;
-        } else if (isalpha(t)) { 
+        else if (t == '#') {
+            while ((t = getchar()) != '\n')
+                ; /* Strip out comments (whole line) */
+            lineno = lineno + 1;
+        }else if (isdigit(t)) {
+            int b = 0;
+            lexbuf[b++] = t;
+            t = getchar();
+        
+            // Integer part
+            while (isdigit(t)) {
+                if (b < BSIZE) lexbuf[b++] = t;
+                t = getchar();
+            }
+        
+            // Optional fractional part
+            if (t == '.') {
+                if (b < BSIZE) lexbuf[b++] = t;
+                t = getchar();
+                if (!isdigit(t)) {
+                    // Invalid float e.g., "123."
+                    error("Invalid float literal");
+                }
+                while (isdigit(t)) {
+                    if (b < BSIZE) lexbuf[b++] = t;
+                    t = getchar();
+                }
+            }
+        
+            // Optional exponent part
+            if (t == 'e' || t == 'E') {
+                if (b < BSIZE) lexbuf[b++] = t;
+                t = getchar();
+                if (t == '+' || t == '-') {
+                    if (b < BSIZE) lexbuf[b++] = t;
+                    t = getchar();
+                }
+                if (!isdigit(t)) {
+                    error("Invalid exponent in number");
+                }
+                while (isdigit(t)) {
+                    if (b < BSIZE) lexbuf[b++] = t;
+                    t = getchar();
+                }
+            }
+        
+            // Finalize
+            if (t != EOF) ungetc(t, stdin);
+            lexbuf[b] = EOS;
+        
+            tokenval = insert(lexbuf, NUM);  // Keep the full num as string
+            return NUM;
+        }else if (isalpha(t)) { 
             int p, b = 0;
             while (isalnum(t)) { 
                 if (b >= BSIZE)
@@ -459,6 +450,7 @@ void statements (void){
 void r3 (void){
     if(lookahead == ';'){
         match(';'); 
+        emit(';', tokenval);
         statement();
         r3();
     }else{
@@ -474,7 +466,6 @@ void statement (void){
         matchedStatement();
     }
     // TODO: print ;\n after the last statement
-    emit(';', tokenval);
 }
 
 void matchedStatement (void){
@@ -633,7 +624,7 @@ void emit(int t, int tval){
             printf("%c\n", t); break;
 
         case NUM:
-            printf("%d", tval); break;
+            printf("%s", symtable[tval].lexptr); break;
 
         case BEGIN:
             printf("{\n"); break;

@@ -2,8 +2,5 @@ PROGRAM Example(Input, Output);
 VAR
 X,Y,Z: integer; A,B: real;
 BEGIN
-REPEAT
-Z:=X-Y;
-Z:=X-Y
-UNTIL Z<0;
+Z:=123.5E-4;
 END.
