@@ -1,6 +1,6 @@
-PROGRAM Example(Input, Output);
+program Example(Input, Output);
 VAR
-X,Y,Z: integer; A,B: real;
+x,Y,Z: integer; A,B: real;
 BEGIN
 X:=20;
 Y:=10;

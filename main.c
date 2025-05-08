@@ -54,6 +54,7 @@ char current_ids[SYMAX][BSIZE]; // to hold variable names temporarily
 int current_id_count = 0;
 
 char lexbuf[BSIZE];
+char compareBuf[BSIZE];
 int lineno = 1;
 int tokenval = NONE;
 
@@ -236,26 +237,27 @@ int lexan(void) { /* Lexical Analyzer */
             while (isalnum(t)) { 
                 if (b >= BSIZE)
                     error("Compiler Error");
-                // TODO: Check the need to lower it  
-                lexbuf[b++] = tolower(t); 
+                compareBuf[b] = tolower(t);
+                lexbuf[b++] = t; 
                 t = getchar();
             }
 
+            compareBuf[b] = EOS;
             lexbuf[b] = EOS;
             if (t != EOF)
                 ungetc(t, stdin);
 
-            if (strcmp(lexbuf, "div") == 0){
+            if (strcmp(compareBuf, "div") == 0){
                 tokenval = DIV;
                 token = MULOP;
-                p = lookup(lexbuf);
-            }else if (strcmp(lexbuf, "and") == 0){
+                p = lookup(compareBuf);
+            }else if (strcmp(compareBuf, "and") == 0){
                 tokenval = AND;
                 token = MULOP;
-            }else if (strcmp(lexbuf, "mod") == 0){
+            }else if (strcmp(compareBuf, "mod") == 0){
                 tokenval = MOD;
                 token = MULOP;
-            }else if (strcmp(lexbuf, "or") == 0){
+            }else if (strcmp(compareBuf, "or") == 0){
                 tokenval = OR;
                 token = ADDOP;
             }else{
@@ -785,14 +787,35 @@ void emit(int t, int tval){
 }
 
 /* Symbol */
-int lookup(char s[]){
+int lookup(char s[]) {
     // fprintf(stderr, "Lookup\n");
     int p;
-    for(p = lastentry; p > 0; p = p - 1)
-        if(strcmp(symtable[p].lexptr, s) == 0)
+    char s_lower[BSIZE], p_lower[BSIZE];
+
+    for (p = lastentry; p > 0; p = p - 1) {
+        // Convert s to lowercase
+        int i = 0;
+        while (s[i] && i < BSIZE - 1) {
+            s_lower[i] = tolower((unsigned char)s[i]);
+            i++;
+        }
+        s_lower[i] = '\0';
+
+        // Convert symtable[p].lexptr to lowercase
+        i = 0;
+        while (symtable[p].lexptr[i] && i < BSIZE - 1) {
+            p_lower[i] = tolower((unsigned char)symtable[p].lexptr[i]);
+            i++;
+        }
+        p_lower[i] = '\0';
+
+        // Compare lowercased strings
+        if (strcmp(s_lower, p_lower) == 0)
             return p;
+    }
     return 0;
 }
+
 
 int insert(char s[], int tok){
     // fprintf(stderr, "Insert\n");
