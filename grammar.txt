@@ -40,15 +40,17 @@ Type -> integer | real
 
 Block -> begin Statements end
 Statements -> Statements ; Statement | Statement
-Statement -> MatchedStatement | UnmatchedStatement
 
-MatchedStatement -> id := Expression
-                  | Block
-                  | if Expression then MatchedStatement else MatchedStatement
-                  | repeat Statement until Expression
-                  | writeln(SimpleExpression)
-UnmatchedStatement -> if Expression then Statement
-                    | if Expression then MatchedStatement else UnmatchedStatement
+Statement -> id := Expression
+            | Block
+            | IfStatement
+            | repeat Statements until Expression
+            | writeln(SimpleExpression)
+
+IfStatement  -> Matched | Unmatched
+Matched   -> if Expression then Matched else Matched
+Unmatched -> if Expression then IfStatement 
+           | if Expression then Matched else Unmatched
 
 ExpressionList -> ExpressionList , Expression | Expression
 Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
@@ -74,16 +76,17 @@ Type -> integer | real
 Block -> begin Statements end
 Statements -> Statement R3 
 R3 -> ; Statement R3 | <epsilon>
-Statement -> MatchedStatement | UnmatchedStatement
 
-MatchedStatement -> id := Expression
-                  | Block
-                  | if Expression then MatchedStatement else MatchedStatement
-                  | repeat Statement until Expression
-                  | writeln(SimpleExpression)
+Statement -> id := Expression
+            | Block
+            | IfStatement
+            | repeat Statements until Expression
+            | writeln(SimpleExpression)
 
-UnmatchedStatement -> if Expression then Statement
-                    | if Expression then MatchedStatement else UnmatchedStatement
+IfStatement  -> Matched | Unmatched
+Matched   -> if Expression then Matched else Matched
+Unmatched -> if Expression then IfStatement 
+           | if Expression then Matched else Unmatched
 
 ExpressionList -> Expression R4
 R4 -> , Expression R4 | <epsilon>
@@ -115,23 +118,22 @@ Type -> integer | real
 Block -> begin Statements end
 Statements -> Statement R3 
 R3 -> ; Statement R3 | <epsilon>
-Statement -> MatchedStatement | UnmatchedStatement
 
-MatchedStatement -> id := Expression
+Statement -> id := Expression
                   | Block
-                  | if Expression then MatchedStatement else MatchedStatement
-                  | repeat Statement until Expression
+                  | IfStatement
+                  | repeat Statements until Expression
                   | writeln(SimpleExpression)
 
-UnmatchedStatement -> if A1
-A1 -> Expression A2
-A2 -> then A3
-A3 -> Statement | MatchedStatement else UnmatchedStatement
+IfStatement -> if Expression then Matched OptionalTail 
+Matched -> if Expression then Matched else Matched 
+OptionalTail -> else Tail | <epsilon>
+Tail -> if Expression then Tail 
 
 ExpressionList -> Expression R4
 R4 -> , Expression R4 | <epsilon>
-Expression -> SimpleExpression A4
-A4 -> relop SimpleExpression  | <epsilon>
+Expression -> SimpleExpression A1
+A1 -> relop SimpleExpression  | <epsilon>
 
 TrivialCase -> addop Term | Term
 SimpleExpression -> TrivialCase  R5
@@ -142,3 +144,4 @@ R6 -> mulop Factor R6 | <epsilon>
 Factor -> id | num | ( Expression ) | not Factor
 
 ******************************************************************************************************
+
