@@ -2,5 +2,8 @@ PROGRAM Example(Input, Output);
 VAR
 X,Y,Z: integer; A,B: real;
 BEGIN
-Z:=123.5E-4;
+IF X > Y THEN
+Z:=X+Y;
+ELSE
+Z:=Y;
 END.
