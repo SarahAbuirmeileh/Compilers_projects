@@ -2,12 +2,10 @@ program Example(Input, Output);
 VAR
 x,Y,Z: integer; A,B: real;
 BEGIN
-X:=20;
-Y:=10;
 IF X > Y THEN
 Z:=X+Y;
 ELSE
-Z:=Y;
+Z:=X;
 REPEAT
 Z:=X-Y;
 X:=X-2
