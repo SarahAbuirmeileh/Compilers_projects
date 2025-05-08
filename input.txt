@@ -2,8 +2,14 @@ PROGRAM Example(Input, Output);
 VAR
 X,Y,Z: integer; A,B: real;
 BEGIN
+X:=20;
+Y:=10;
 IF X > Y THEN
 Z:=X+Y;
 ELSE
 Z:=Y;
+REPEAT
+Z:=X-Y;
+X:=X-2
+UNTIL Z<0;
 END.

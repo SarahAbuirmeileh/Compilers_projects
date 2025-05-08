@@ -145,3 +145,11 @@ Factor -> id | num | ( Expression ) | not Factor
 
 ******************************************************************************************************
 
+Statement -> id := Expression
+                  | Block
+                  | IfStatement
+                  | repeat Statements until Expression
+                  | writeln(SimpleExpression)
+
+IfStatement -> if Expression then Statement OptionalTail 
+OptionalTail -> else Statement | <epsilon>
