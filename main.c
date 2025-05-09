@@ -42,7 +42,6 @@
 #define AND 288 
 #define OR 289
 #define BOOL 290
-#define NONE -1
 
 #define STRMAX 999 /* Size of lexemes array*/
 #define SYMAX 100 /* Size of symtable */
@@ -54,6 +53,7 @@ int is_main_block = 0;
 
 char current_ids[SYMAX][BSIZE]; // to hold variable names temporarily
 int current_id_count = 0;
+int semicolon_read = 0;
 
 char lexbuf[BSIZE];
 char compareBuf[BSIZE];
@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
 
 /* Lexer*/
 int lexan(void) { /* Lexical Analyzer */
-    fprintf(stderr, "Lexan\n");
+    // fprintf(stderr, "Lexan\n");
 
     int t;
     int token;
@@ -366,13 +366,13 @@ int lexan(void) { /* Lexical Analyzer */
 
 /* Parser */
 void parse(void){ /* parser and translate expression list*/
-    fprintf(stderr, "Parser\n");
+    // fprintf(stderr, "Parser\n");
     lookahead = lexan();
     program();
 }
 
 void program(void) {
-    fprintf(stderr, "Program\n");
+    // fprintf(stderr, "Program\n");
     header(); declarations(); 
     is_main_block = 1;
     // TODO : BLOCK. -> main, BLOCK -> normal block 
@@ -380,8 +380,7 @@ void program(void) {
 }
 
 void header(void) {
-    fprintf(stderr, "Header\n");
-    // int t = lookahead;
+    // fprintf(stderr, "Header\n");
     match(PROGRAM);
     emit(PROGRAM, NONE);
     match(ID); 
@@ -394,7 +393,7 @@ void header(void) {
 }
 
 void declarations(void) {
-    fprintf(stderr, "Declarations\n");
+    // fprintf(stderr, "Declarations\n");
     if (lookahead == VAR){
         match(VAR);  
         variableDeclarations();
@@ -404,13 +403,13 @@ void declarations(void) {
 }
 
 void variableDeclarations(void) {
-    fprintf(stderr, "VariableDeclarations\n");
+    // fprintf(stderr, "VariableDeclarations\n");
     variableDeclaration();
     moreVariableDeclarations();
 }
 
 void moreVariableDeclarations (void){
-    fprintf(stderr, "MoreVariableDeclarations\n");
+    // fprintf(stderr, "MoreVariableDeclarations\n");
     if(lookahead == ID){
         variableDeclaration();
         moreVariableDeclarations();
@@ -420,7 +419,7 @@ void moreVariableDeclarations (void){
 }
 
 void variableDeclaration (void){
-    fprintf(stderr, "VariableDeclaration\n");
+    // fprintf(stderr, "VariableDeclaration\n");
     identifierList();
     match(EOD); 
     
@@ -429,7 +428,7 @@ void variableDeclaration (void){
 }
 
 void identifierList(void) {
-    fprintf(stderr, "IdentifierList\n");
+    // fprintf(stderr, "IdentifierList\n");
     if (lookahead == ID) {
         strcpy(current_ids[current_id_count++], symtable[tokenval].lexptr);
         match(ID);
@@ -440,7 +439,7 @@ void identifierList(void) {
 }
 
 void moreIdList(void) {
-    fprintf(stderr, "MoreIdList\n");
+    // fprintf(stderr, "MoreIdList\n");
     if (lookahead == ',') {
         match(',');
         if (lookahead == ID) {
@@ -456,7 +455,7 @@ void moreIdList(void) {
 }
 
 void type(void){
-    fprintf(stderr, "Type\n");
+    // fprintf(stderr, "Type\n");
     if (lookahead == INTEGER || lookahead == REAL) {
         int declared_type = lookahead;
         if (lookahead == INTEGER) {
@@ -484,7 +483,7 @@ void type(void){
 }
 
 void block (void){
-    fprintf(stderr, "Block\n");
+    // fprintf(stderr, "Block\n");
     match(BEGIN);
     if (is_main_block) {
         printf("int main(void)\n");
@@ -502,15 +501,22 @@ void block (void){
 }
 
 void statements (void){
-    fprintf(stderr, "Statements\n");
+    // fprintf(stderr, "Statements\n");
     statement();
     r3();
 }
 
 void r3 (void){
-    fprintf(stderr, "R3\n");
-    if(lookahead == ';'){
+    // fprintf(stderr, "R3\n");
+    if(semicolon_read){
+        semicolon_read = 0;
+        // fprintf(stderr, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& %d\n", lookahead);
+
+        statement();
+        r3();
+    }else if(lookahead == ';'){
         match(';'); 
+        // fprintf(stderr, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ %d\n", lookahead);
         statement();
         r3();
     }else{
@@ -519,7 +525,8 @@ void r3 (void){
 }
 
 void statement (void){
-    fprintf(stderr, "statement\n");
+    // fprintf(stderr, "statement\n");
+    // fprintf(stderr, "\n **************************** Lookahead :%d ******************\n", lookahead);
     switch (lookahead){
         case ID:
             int tval = tokenval;
@@ -542,9 +549,15 @@ void statement (void){
         case IF:
             ifStatement(); break;
         case REPEAT:
-            match(REPEAT); emit(REPEAT, tokenval); statements(); match(UNTIL); emit(UNTIL, tokenval); emit('(', tokenval); expression(); emit(')', tokenval); emit(';', tokenval); break;
+            match(REPEAT); emit(REPEAT, tokenval); statements(); match(UNTIL); emit(UNTIL, tokenval); 
+            emit('(', tokenval); expression(); emit(')', tokenval); emit(';', tokenval); break;
         case WRITELN:
-            match(WRITELN); emit(WRITELN, tokenval); match('('); emit('(', tokenval); simpleExpression(); match(')'); emit(')', tokenval);  emit(';', tokenval); break;
+            match(WRITELN); emit(WRITELN, tokenval); match('('); emit('(', tokenval); 
+            // int type = simpleExpression(); 
+            // fprintf(stderr, "!!!!!!!!!!!!!!!! type %d\n", type);
+            emit('e', INTEGER); 
+            simpleExpression();
+            match(')'); emit(')', tokenval);  emit(';', tokenval); break;
         default:
             return;
     }
@@ -562,28 +575,33 @@ void ifStatement(void){
     statement(); 
     if (lookahead == ';'){
         match(';');
+        semicolon_read = 1;
     }
     optionalTail();
+    // fprintf(stderr, "########### Lookahead: ######## %d\n", lookahead);
 }
 
 void optionalTail(void){
-    fprintf(stderr, "OptionalTail\n");
+    // fprintf(stderr, "OptionalTail\n");
     if(lookahead == ELSE){
         match(ELSE); emit(ELSE, tokenval);
         statement();
     }else{
         // <epsilon>
+        fprintf(stderr, "Lookahead: %d\n", lookahead);
+        ungetc(lookahead, stdin);
+        fprintf(stderr, "Lookahead: %d\n", lookahead);
     }
 }
 
 void expressionList (void){
-    fprintf(stderr, "ExpressionList\n");
+    // fprintf(stderr, "ExpressionList\n");
     expression();
     r4();
 }
 
 void r4 (void){
-    fprintf(stderr, "R4\n");
+    // fprintf(stderr, "R4\n");
     if(lookahead == ','){
         match(','); emit(',', tokenval); 
         expression(); 
@@ -594,13 +612,13 @@ void r4 (void){
 }
 
 int simpleExpression(void){
-    fprintf(stderr, "SimpleExpression\n");
+    // fprintf(stderr, "SimpleExpression\n");
     int leftType = trivialCase();
     return r5(leftType);
 }
 
 int r5(int leftType){
-    fprintf(stderr, "R5\n");
+    // fprintf(stderr, "R5\n");
     if (lookahead == ADDOP){
         int tval = tokenval;
         match(ADDOP); emit(ADDOP, tval);  
@@ -618,7 +636,7 @@ int r5(int leftType){
 }
 
 int trivialCase(void){
-    fprintf(stderr, "TrivialCase\n");
+    // fprintf(stderr, "TrivialCase\n");
     if (lookahead == ADDOP) {
         int tval = tokenval;
         match(ADDOP); emit(ADDOP, tval); 
@@ -628,13 +646,13 @@ int trivialCase(void){
 }
 
 int term(void){
-    fprintf(stderr, "Term\n");
+    // fprintf(stderr, "Term\n");
     int leftType = factor();
     return r6(leftType);
 }
 
 int r6(int leftType){
-    fprintf(stderr, "R6\n");
+    // fprintf(stderr, "R6\n");
     if (lookahead == MULOP){ 
         int tval = tokenval;
         match(MULOP); emit(MULOP, tval);  
@@ -652,13 +670,13 @@ int r6(int leftType){
 }
 
 int expression(void){
-    fprintf(stderr, "Expression\n");
+    // fprintf(stderr, "Expression\n");
     int leftType = simpleExpression();
     return a1(leftType);
 }
 
 int a1(int leftType){
-    fprintf(stderr, "A1\n");
+    // fprintf(stderr, "A1\n");
     if(lookahead == RELOP){ 
         int tval = tokenval;
         match(RELOP); emit(RELOP, tval); 
@@ -673,7 +691,7 @@ int a1(int leftType){
 }
 
 int factor(void){
-    fprintf(stderr, "Factor\n");
+    // fprintf(stderr, "Factor\n");
     switch (lookahead){
         case ID: {
             int tval = tokenval;
@@ -702,7 +720,8 @@ int factor(void){
 }
 
 void match(int t) {
-    fprintf(stderr, "Match\n");
+    // fprintf(stderr, "Match\n");
+    // fprintf(stderr, " t: %d, lookahead: %d tokenval: %d\n", t, lookahead, tokenval);
     if(lookahead == t)
         lookahead = lexan();
     else {
@@ -712,7 +731,7 @@ void match(int t) {
 
 /* Emitter */
 void emit(int t, int tval){
-    fprintf(stderr, "Emit %d\n", t);
+    // fprintf(stderr, "Emit %d\n", t);
     switch(t){
         case '+' : case '-' : case '*' : case '/': case '%':
             printf("%c ", t); break;
@@ -817,15 +836,19 @@ void emit(int t, int tval){
             // printf("} while !");
         
         case WRITELN:
-            // fprintf(stderr, "TVAL: %d ",tval);
-
-            if (symtable[tval].token == INTEGER) {
-                printf("printf(\"%%d\\n\", %s);\n", symtable[tval].lexptr);
-            } else if (symtable[tval].token == REAL) {
-                printf("printf(\"%%f\\n\", %s);\n", symtable[tval].lexptr);
-            } else {
-                error("/* Unknown type for WRITELN */\n");
-            }
+            printf("printf");
+            
+            break;
+        
+        case 'e': // End of WRITELN 
+            printf("\"%%d\\n\",");
+            // if (tval == INTEGER) {
+            //     printf("\"%%d\\n\"\n");
+            // } else if (tval == REAL) {
+            //     printf("\"%%f\\n\"\n");
+            // } else {
+            //     error("Type Error of WRITELN");
+            // }    
             break;
 
         default:
@@ -835,7 +858,7 @@ void emit(int t, int tval){
 
 /* Symbol */
 int lookup(char s[]) {
-    fprintf(stderr, "Lookup\n");
+    // fprintf(stderr, "Lookup\n");
     int p;
     char s_lower[BSIZE], p_lower[BSIZE];
 
@@ -887,7 +910,7 @@ int insert(char s[], int tok, int type){
 
 /* Init */
 void init(void){ /* Loads keywords into symtable*/
-    fprintf(stderr, "Init\n");
+    // fprintf(stderr, "Init\n");
     struct entry *p;
     for(p = keywords; p->token; p++)
         insert(p->lexptr, p->token, p->type);

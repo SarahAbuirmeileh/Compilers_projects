@@ -1,13 +1,16 @@
-program Example(Input, Output);
+PROGRAM Example(Input, Output);
 VAR
-x,Y,Z: integer; A,B: real;
+X,Y,Z: integer; A,B: real;
 BEGIN
+X:=20;
+Y:=10;
 IF X > Y THEN
 Z:=X+Y;
 ELSE
-Z:=X;
+Z:=Y;
 REPEAT
 Z:=X-Y;
 X:=X-2
 UNTIL Z<0;
+WRITELN(Z)
 END.
