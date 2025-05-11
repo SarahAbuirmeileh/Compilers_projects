@@ -1,7 +1,18 @@
 #include<stdio.h>
-(null) ,(null) ,(null) token 279, tokenval 5
-int ;(null) ,(null) token 279, tokenval 6
-float ;int main(void)
+int X,Y,Z;
+float A,B;
+int main(void)
 {
+X=20;
+Y=10;
+if(X>Y)
+Z=X+Y;
+do
+{
+Z=X-Y;
+X=X-2;
+}
+while !(Z<0);
+printf("%d\n",Z);
 return 0;
 }

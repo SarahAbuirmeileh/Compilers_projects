@@ -508,7 +508,7 @@ void statements (void){
 
 void r3 (void){
     // fprintf(stderr, "R3\n");
-    if(semicolon_read){
+    if(semicolon_read == 1){
         semicolon_read = 0;
         // fprintf(stderr, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& %d\n", lookahead);
 
@@ -549,9 +549,13 @@ void statement (void){
         case IF:
             ifStatement(); break;
         case REPEAT:
-            match(REPEAT); emit(REPEAT, tokenval); statements(); match(UNTIL); emit(UNTIL, tokenval); 
+            // fprintf(stderr, "!!!!!!!!!!!!!!!! \n");
+            match(REPEAT); emit(REPEAT, tokenval); 
+            statements(); 
+            match(UNTIL); emit(UNTIL, tokenval); 
             emit('(', tokenval); expression(); emit(')', tokenval); emit(';', tokenval); break;
         case WRITELN:
+            // TODO: Handel writeln for float/real if required
             match(WRITELN); emit(WRITELN, tokenval); match('('); emit('(', tokenval); 
             // int type = simpleExpression(); 
             // fprintf(stderr, "!!!!!!!!!!!!!!!! type %d\n", type);
@@ -588,9 +592,6 @@ void optionalTail(void){
         statement();
     }else{
         // <epsilon>
-        fprintf(stderr, "Lookahead: %d\n", lookahead);
-        ungetc(lookahead, stdin);
-        fprintf(stderr, "Lookahead: %d\n", lookahead);
     }
 }
 

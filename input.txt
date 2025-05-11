@@ -6,8 +6,6 @@ X:=20;
 Y:=10;
 IF X > Y THEN
 Z:=X+Y;
-ELSE
-Z:=Y;
 REPEAT
 Z:=X-Y;
 X:=X-2
