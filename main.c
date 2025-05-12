@@ -64,7 +64,16 @@ struct entry{  /* From of symbol table entry */
     char *lexptr;
     int token;
     int type; 
-};    
+}; 
+
+struct emitEntry {
+    int token;
+    int tokenval;
+};
+
+struct emitEntry emitBuffer[SYMAX];
+int emit_buffer_index = 0;
+int store_emit_buffer = 0;
 
 // struct entry symtable[]; /* Symbol table*/
 struct entry keywords[] = {
@@ -130,6 +139,7 @@ int lookup(char s[]);
 int insert(char s[], int tok, int type);
 void init(void);
 void error(char *m);
+void store_emit(int token, int tokenval);
 
 /* Main */
 int main(int argc, char *argv[]) {
@@ -555,13 +565,12 @@ void statement (void){
             match(UNTIL); emit(UNTIL, tokenval); 
             emit('(', tokenval); expression(); emit(')', tokenval); emit(';', tokenval); break;
         case WRITELN:
-            // TODO: Handel writeln for float/real if required
-            match(WRITELN); emit(WRITELN, tokenval); match('('); emit('(', tokenval); 
-            // int type = simpleExpression(); 
-            // fprintf(stderr, "!!!!!!!!!!!!!!!! type %d\n", type);
-            emit('e', INTEGER); 
-            simpleExpression();
-            match(')'); emit(')', tokenval);  emit(';', tokenval); break;
+            match(WRITELN);  match('('); 
+            store_emit_buffer = 1;
+            int type = simpleExpression();
+            emit(WRITELN, type);
+            store_emit_buffer = 0;
+            match(')'); emit(';', tokenval); break;
         default:
             return;
     }
@@ -622,7 +631,13 @@ int r5(int leftType){
     // fprintf(stderr, "R5\n");
     if (lookahead == ADDOP){
         int tval = tokenval;
-        match(ADDOP); emit(ADDOP, tval);  
+        match(ADDOP); 
+        if(store_emit_buffer == 0){
+            emit(ADDOP, tval);  
+        }else{
+            store_emit(ADDOP, tval); 
+        } 
+        
         int rightType = term();
         // if (leftType != rightType) {
         //     error("Type Error: mismatch in addition/subtraction");
@@ -640,7 +655,12 @@ int trivialCase(void){
     // fprintf(stderr, "TrivialCase\n");
     if (lookahead == ADDOP) {
         int tval = tokenval;
-        match(ADDOP); emit(ADDOP, tval); 
+        match(ADDOP);
+        if(store_emit_buffer == 0){
+            emit(ADDOP, tval); 
+        }else{
+            store_emit(ADDOP, tval);
+        } 
         return term();
     }
     return term();
@@ -656,7 +676,13 @@ int r6(int leftType){
     // fprintf(stderr, "R6\n");
     if (lookahead == MULOP){ 
         int tval = tokenval;
-        match(MULOP); emit(MULOP, tval);  
+        match(MULOP);
+        
+        if (store_emit_buffer == 0){
+            emit(MULOP, tval);  
+        }else{
+            store_emit(MULOP, tval);  
+        }
         int rightType = factor();
         int type = INTEGER;
         // if (leftType != rightType) {
@@ -696,21 +722,53 @@ int factor(void){
     switch (lookahead){
         case ID: {
             int tval = tokenval;
-            emit(ID, tokenval); match(ID);
+
+            if (store_emit_buffer == 0){
+                emit(ID, tokenval); 
+            }else{
+                store_emit(ID, tokenval); 
+            }
+            match(ID);
             return symtable[tval].type;
         }
         case NUM: {
             int t = symtable[tokenval].type; // implement based on your tokens
-            emit(NUM, tokenval); match(NUM);
+             
+            if (store_emit_buffer == 0){
+                emit(NUM, tokenval); 
+            }else{
+                store_emit(NUM, tokenval); 
+            }
+            match(NUM);
             return t;
         }
         case '(':
-            emit('(', tokenval); match('(');
+            if (store_emit_buffer == 0){
+                emit('(', tokenval);
+            }else{
+                store_emit('(', tokenval);
+            }
+
+            match('(');
             int t = expression();
-            emit(')', tokenval); match(')');
+
+            if (store_emit_buffer == 0){
+                emit(')', tokenval); 
+            }else{
+                store_emit(')', tokenval); 
+            }
+            
+            match(')');
             return t;
+
         case NOT:
-            emit(NOT, tokenval); match(NOT);
+
+            if (store_emit_buffer == 0){
+                emit(NOT, tokenval); 
+            }else{
+                store_emit(NOT, tokenval); 
+            }
+            match(NOT);
             int t2 = factor();
             if (t2 != BOOL) error("Expected boolean for NOT");
             return BOOL;
@@ -837,21 +895,21 @@ void emit(int t, int tval){
             // printf("} while !");
         
         case WRITELN:
-            printf("printf");
-            
+            printf("printf(\"%%");
+            if(tval == INTEGER){
+                printf("d");
+            }else if (tval == REAL){
+                printf("f");
+            }
+            printf("\\n\",");
+
+            for (int i = 0; i < emit_buffer_index; i++){
+                emit(emitBuffer[i].token, emitBuffer[i].tokenval);
+            }
+            emit_buffer_index = 0;
+            printf(")");
             break;
         
-        case 'e': // End of WRITELN 
-            printf("\"%%d\\n\",");
-            // if (tval == INTEGER) {
-            //     printf("\"%%d\\n\"\n");
-            // } else if (tval == REAL) {
-            //     printf("\"%%f\\n\"\n");
-            // } else {
-            //     error("Type Error of WRITELN");
-            // }    
-            break;
-
         default:
             printf("token %d, tokenval %d\n", t, tval);
     }
@@ -921,4 +979,14 @@ void init(void){ /* Loads keywords into symtable*/
 void error(char *m){
     fprintf(stderr, "line %d: %s\n", lineno, m);
     exit(1); /* Unsuccessful termination */
+}
+
+void store_emit(int token, int tokenval) {
+    if (emit_buffer_index < SYMAX) {
+        emitBuffer[emit_buffer_index].token = token;
+        emitBuffer[emit_buffer_index].tokenval = tokenval;
+        emit_buffer_index++;
+    } else {
+        error("Emit buffer overflow");
+    }
 }
