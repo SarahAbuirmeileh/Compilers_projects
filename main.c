@@ -392,7 +392,6 @@ void program(void) {
 void header(void) {
     // fprintf(stderr, "Header\n");
     match(PROGRAM);
-    emit(PROGRAM, NONE);
     match(ID); 
     match('('); 
     match(INPUT); 
@@ -400,6 +399,7 @@ void header(void) {
     match(OUTPUT);  
     match(')');  
     match(';');  
+    emit(PROGRAM, tokenval);
 }
 
 void declarations(void) {
@@ -495,17 +495,18 @@ void type(void){
 void block (void){
     // fprintf(stderr, "Block\n");
     match(BEGIN);
-    if (is_main_block) {
+    if (is_main_block == 1) {
         printf("int main(void)\n");
     }
+    is_main_block++; // reset after use
+    int cur_is_main_block = is_main_block;
     emit(BEGIN, NONE); 
 
     statements();
 
     match(END);
-    if (is_main_block) {
+    if (cur_is_main_block == 2) {
         printf("return 0;\n");
-        is_main_block = 0; // reset after use
     }
     emit(END, NONE); 
 }
@@ -835,7 +836,7 @@ void emit(int t, int tval){
                 case EQ:
                     printf("="); return;
                 case NE:
-                    printf("<>"); return;
+                    printf("!="); return;
                 
                 default: return;
             }
@@ -847,11 +848,11 @@ void emit(int t, int tval){
                 case '/':
                     printf("/"); return;
                 case DIV:
-                    printf(" DIV "); return;
+                    printf("/"); return;
                 case MOD:
-                    printf(" MOD "); return;
+                    printf("%%"); return;
                 case AND:
-                    printf(" AND "); return;
+                    printf("&&"); return;
                 
                 default: return;
             }
@@ -863,7 +864,7 @@ void emit(int t, int tval){
                 case '-':
                     printf("-"); return;
                 case OR:
-                    printf(" OR "); return;
+                    printf("||"); return;
                 
                 default: return;
             }
@@ -878,7 +879,7 @@ void emit(int t, int tval){
             printf("if"); break;
         
         case THEN:
-        printf("\n"); break;
+            printf("\n"); break;
         
         case ELSE:
             // fprintf(stderr, "ELSE ************\n");
