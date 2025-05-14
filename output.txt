@@ -3,17 +3,18 @@ int X,Y,Z;
 float A,B;
 int main(void)
 {
-X=20;
-Y=10;
-if(X>Y)
-Z=X+Y;
-do
-{
-Z=X-Y;
-X=X-2;
-}
-while !(Z<0);
-printf("%d\n",Z);
-printf("%f\n",A);
-return 0;
+    X=20;
+    Y=10;
+    if(X>Y)
+        Z=X+Y;
+    else
+        Z=Y;
+    do
+    {
+        Z=X-Y;
+        X=X-2;
+    }
+    while !(Z<0);
+    printf("%d\n",Z);
+    return 0;
 }
