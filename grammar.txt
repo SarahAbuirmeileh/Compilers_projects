@@ -144,7 +144,8 @@ Factor -> id | num | ( Expression ) | not Factor
 
 ******************************************************************************************************
 
-Final Grammar (After adding the semantic actions):
+# Final Grammar (After adding the semantic actions):
+# (The final grammar which is used in the compiler)
 
 Program -> Header Declarations Block.
 Header -> program id (input, output) ; {print("#include<stdio.h>")}

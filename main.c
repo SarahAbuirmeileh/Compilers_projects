@@ -75,7 +75,7 @@ struct emitEntry emitBuffer[SYMAX];
 int emit_buffer_index = 0;
 int store_emit_buffer = 0;
 
-// struct entry symtable[]; /* Symbol table*/
+/* Symbol table*/
 struct entry keywords[] = {
     {"program", PROGRAM, NONE},
     {"input", INPUT, NONE},
@@ -214,7 +214,7 @@ int lexan(void) { /* Lexical Analyzer */
                 t = getchar();
                 if (!isdigit(t)) {
                     // Invalid float e.g., "123."
-                    error("Invalid float literal");
+                    error("Syntax error: Invalid float literal");
                 }
                 while (isdigit(t)) {
                     if (b < BSIZE) lexbuf[b++] = t;
@@ -232,7 +232,7 @@ int lexan(void) { /* Lexical Analyzer */
                     t = getchar();
                 }
                 if (!isdigit(t)) {
-                    error("Invalid exponent in number");
+                    error("Syntax Error: Invalid exponent in number");
                 }
                 while (isdigit(t)) {
                     if (b < BSIZE) lexbuf[b++] = t;
@@ -333,7 +333,6 @@ int lexan(void) { /* Lexical Analyzer */
             return DONE;
         else {
             tokenval = NONE;
-            // fprintf(stderr, "Token: %d\n", t);
             return t;
         }
     }
@@ -400,7 +399,7 @@ void identifierList(void) {
         match(ID);
         moreIdList();
     } else {
-        error("Expected identifier");
+        error("Syntax Error");
     }
 }
 
@@ -412,7 +411,7 @@ void moreIdList(void) {
             match(ID);
             moreIdList();
         } else {
-            error("Expected identifier after ','");
+            error("Syntax Error: Expected identifier after ','");
         }
     }else{
         // <epsilon>
@@ -442,7 +441,7 @@ void type(void){
 
         current_id_count = 0; // Reset for the next declaration
     } else {
-        error("Expected type 'integer' or 'real' ");
+        error("Syntax Error: Expected type 'integer' or 'real' ");
     }
 }
 
@@ -451,7 +450,7 @@ void block (void){
     if (is_main_block == 1) {
         printf("int main(void)\n");
     }
-    is_main_block++; // reset after use
+    is_main_block++;
     int cur_is_main_block = is_main_block;
     emit(BEGIN, NONE); 
 
@@ -494,7 +493,6 @@ void statement (void){
             match(ASSIGNOP); emit(ASSIGNOP, tval); 
 
             int expr_type = expression(); 
-            // Type checking
             if (symtable[idToken].type == INTEGER && expr_type == REAL) {
                 error("Type Error: Can't assign float/real into integer");
             }
@@ -655,8 +653,8 @@ int a1(int leftType){
         match(RELOP); emit(RELOP, tval); 
 
         int rightType = simpleExpression();
-        if (leftType != rightType) {
-            error("Type mismatch in relational expression");
+        if ((leftType != INTEGER && leftType != REAL) || (rightType != INTEGER && rightType != REAL)) {
+            error("Type Error: Type mismatch in relational expression");
         }
         return BOOL;
     }
@@ -715,10 +713,10 @@ int factor(void){
             }
             match(NOT);
             int t2 = factor();
-            if (t2 != BOOL) error("Expected boolean for NOT");
+            if (t2 != BOOL) error("Type Error: Expected boolean for NOT");
             return BOOL;
         default:
-            error("Invalid factor");
+            error("Error: Invalid factor");
             return NONE;
     }
 }
@@ -739,9 +737,6 @@ void emit(int t, int tval){
 
         case PROGRAM:
             printf("#include<stdio.h>\n"); break;
-        
-        case 'm':
-            printf("%s\n", "int main(void)"); break;
 
         case '(': case ')': case ',':
             printf("%c", t); break;
@@ -775,7 +770,7 @@ void emit(int t, int tval){
                 case GE:
                     printf(">="); return;
                 case EQ:
-                    printf("="); return;
+                    printf("=="); return;
                 case NE:
                     printf("!="); return;
                 
@@ -833,7 +828,6 @@ void emit(int t, int tval){
     
         case UNTIL:
             printf("}\nwhile !"); break;
-            // printf("} while !");
         
         case WRITELN:
             printf("printf(\"%%");
