@@ -14,7 +14,6 @@
 #define REAL 260
 #define DONE 261
 #define PROGRAM 262
-#define EOEX 263
 #define BEGIN 264
 #define END 265
 #define IF 266
@@ -675,7 +674,7 @@ int factor(void){
             return symtable[tval].type;
         }
         case NUM: {
-            int t = symtable[tokenval].type; // implement based on your tokens
+            int t = symtable[tokenval].type;
              
             if (store_emit_buffer == 0){
                 emit(NUM, tokenval); 
