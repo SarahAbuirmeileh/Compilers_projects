@@ -162,34 +162,27 @@ void parse(void){ /* parser and translate expression list*/
 void start(void) {
     if (lookahead == PROGRAM) {
         match(PROGRAM);
-        printf("program ");  // Corrected from "Program" to match keyword case
+        emit(PROGRAM, tokenval);
 
         if(lookahead == ID){
             emit(ID, tokenval);
             match(ID);
-            match('(');
-            printf("(");
+            match('('); emit('(', tokenval);
     
             match(INPUT);
-            printf("input");  // Don't printf a token like INPUT directly
+            emit(INPUT, tokenval); 
+            
+            match(','); emit(',', tokenval);
     
-            match(',');
-            printf(",");
+            match(OUTPUT); emit(OUTPUT, tokenval);
     
-            match(OUTPUT);
-            printf("output");
+            match(')'); emit(')', tokenval);
     
-            match(')');
-            printf(")\n");
-    
-            match('{');
-            printf("{\n");
+            match('{'); emit('{', tokenval);
     
             list(); 
-    
-            match('}');
-            printf("}\n");
-    
+            match('}'); emit('}', tokenval);
+
             match(DONE);  // Make sure DONE represents end of file/input
         }else{
             error("Syntax error: expected 'program'");
@@ -272,6 +265,16 @@ void emit(int t, int tval){
             printf("%d ", tval); break;
         case ID:
             printf("%s ", symtable[tval].lexptr); break;
+        case PROGRAM:
+            printf("program "); break;
+        case '(': case ',':
+            printf("%c", t); break;
+        case ')' : case '}':  case '{':
+        printf("%c\n", t); break;
+        case INPUT:
+            printf("input"); break;
+        case OUTPUT:
+            printf("output"); break;
         default:
             printf("token %d, tokenval %d\n", t, tval);
     }
