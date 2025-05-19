@@ -141,7 +141,6 @@ int lexan(void) { /* Lexical Analyzer */
                 p = insert(lexbuf, ID);
 
             tokenval = p;
-            // printf("Token: %s, Type: %d\n", lexbuf, symtable[p].token); // Debug print
             return symtable[p].token;
             }
             else if (t == EOF)
@@ -183,7 +182,7 @@ void start(void) {
             list(); 
             match('}'); emit('}', tokenval);
 
-            match(DONE);  // Make sure DONE represents end of file/input
+            match(DONE); 
         }else{
             error("Syntax error: expected 'program'");
         }
