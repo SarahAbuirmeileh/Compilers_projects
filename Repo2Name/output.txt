@@ -1,0 +1,4 @@
+program test (input,output)
+{
+123 sum 15 / + ;
+12 3 DIV 
