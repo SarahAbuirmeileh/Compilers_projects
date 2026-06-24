@@ -1,0 +1,923 @@
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h> /* To provide a declaration of ‘exit’ */
+
+#define BSIZE 128
+#define NONE -1
+#define EOS '\0'
+
+#define NUM 256
+#define VAR 257
+#define INTEGER 258
+#define ID 259
+#define REAL 260
+#define DONE 261
+#define PROGRAM 262
+#define BEGIN 264
+#define END 265
+#define IF 266
+#define THEN 267
+#define REPEAT 268
+#define UNTIL 269
+#define ELSE 270
+#define RELOP 271
+#define ADDOP 272
+#define MULOP 273
+#define NOT 274
+#define INPUT 275
+#define OUTPUT 276
+#define ASSIGNOP 277
+#define WRITELN 278
+#define EOD 279 // end of declarations
+#define GT 280 
+#define GE 281 
+#define LT 282
+#define LE 283 
+#define EQ 284 
+#define NE 285 
+#define DIV 286 
+#define MOD 287 
+#define AND 288 
+#define OR 289
+#define BOOL 290
+
+#define STRMAX 999 /* Size of lexemes array*/
+#define SYMAX 100 /* Size of symtable */
+
+int tokenval; /* Value of token attribute */
+int lineno;
+int lookahead;
+int is_main_block = 0;
+
+char current_ids[SYMAX][BSIZE]; // to hold variable names temporarily
+int current_id_count = 0;
+int semicolon_read = 0;
+
+char lexbuf[BSIZE];
+char compareBuf[BSIZE];
+int lineno = 1;
+int tokenval = NONE;
+
+struct entry{  /* From of symbol table entry */
+    char *lexptr;
+    int token;
+    int type; 
+}; 
+
+struct emitEntry {
+    int token;
+    int tokenval;
+};
+
+struct emitEntry emitBuffer[SYMAX];
+int emit_buffer_index = 0;
+int store_emit_buffer = 0;
+
+/* Symbol table*/
+struct entry keywords[] = {
+    {"program", PROGRAM, NONE},
+    {"input", INPUT, NONE},
+    {"output", OUTPUT, NONE},
+    {"var", VAR, NONE},
+    {"integer", INTEGER, NONE},
+    {"real", REAL, NONE},
+    {"begin", BEGIN, NONE},
+    {"end", END, NONE},
+    {"if", IF, NONE},
+    {"then", THEN, NONE},
+    {"else", ELSE, NONE},
+    {"repeat", REPEAT, NONE},
+    {"until", UNTIL, NONE},
+    {"writeln", WRITELN, NONE},
+    {"OR", ADDOP, NONE},
+    {"DIV", MULOP, NONE},
+    {"MOD", MULOP, NONE},
+    {"AND", MULOP, NONE},
+    {"not", NOT, NONE},
+    {0, 0, NONE} 
+};
+
+char lexemes[STRMAX];
+int lastchar = -1; /* Last used position in lexemes*/
+
+struct entry symtable[SYMAX];
+int lastentry = 0; /* Last used position in symtable*/
+
+// Functions prototypes
+int lexan(void);
+void parse(void);
+void program(void);
+void header(void);
+void declarations(void);
+void variableDeclarations(void);
+void moreVariableDeclarations (void);
+void variableDeclaration (void);
+void identifierList (void);
+void moreIdList (void);
+void type (void);
+void block (void);
+void statements (void);
+void r3 (void);
+void statement (void);
+void ifStatement (void);
+void optionalTail (void);
+int a1 (int t);
+void expressionList (void);
+void r4 (void);
+int expression (void);
+int trivialCase (void);
+int simpleExpression (void);
+int r5 (int t);
+int term (void);
+int r6 (int t);
+int factor();
+void match(int t);
+void emit(int t, int tval);
+int lookup(char s[]);
+int insert(char s[], int tok, int type);
+void init(void);
+void error(char *m);
+void store_emit(int token, int tokenval);
+
+/* Main */
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <inputfile> <outputfile>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *infile = fopen(argv[1], "r");
+    if (!infile) {
+        perror("Error while opening the input file");
+        return 1;
+    }
+
+    FILE *outfile = fopen(argv[2], "w");
+    if (!outfile) {
+        perror("Error while opening the output file");
+        fclose(infile);
+        return 1;
+    }
+
+    // Redirect stdin and stdout to read and write to the files
+    if (freopen(argv[1], "r", stdin) == NULL) {
+        perror("Failed to redirect stdin");
+        return 1;
+    }
+    if (freopen(argv[2], "w", stdout) == NULL) {
+        perror("Failed to redirect stdout");
+        return 1;
+    }
+
+    init();     // Load keywords into the symbol table
+    parse();    // Start parsing
+
+    fclose(infile);
+    fclose(outfile);
+
+    return 0; // Successful termination
+}
+
+/* Lexer*/
+int lexan(void) { /* Lexical Analyzer */
+
+    int t;
+    int token;
+    while (1){
+        t = getchar();
+        if (t == ' ' || t == '\t')//
+            ; /* Strip out white space */
+        else if (t == '\n')
+            lineno = lineno + 1;
+        else if (t == '#') {
+            while ((t = getchar()) != '\n')
+                ; /* Strip out comments (whole line) */
+            lineno = lineno + 1;
+        }else if (isdigit(t)) {
+            int b = 0;
+            int isFloat = 0;
+            lexbuf[b++] = t;
+            t = getchar();
+        
+            // Integer part
+            while (isdigit(t)) {
+                if (b < BSIZE) lexbuf[b++] = t;
+                t = getchar();
+            }
+        
+            // Optional fractional part
+            if (t == '.') {
+                isFloat = 1;
+                if (b < BSIZE) lexbuf[b++] = t;
+                t = getchar();
+                if (!isdigit(t)) {
+                    // Invalid float e.g., "123."
+                    error("Syntax error: Invalid float literal");
+                }
+                while (isdigit(t)) {
+                    if (b < BSIZE) lexbuf[b++] = t;
+                    t = getchar();
+                }
+            }
+        
+            // Optional exponent part
+            if (t == 'e' || t == 'E') {
+                isFloat = 1;
+                if (b < BSIZE) lexbuf[b++] = t;
+                t = getchar();
+                if (t == '+' || t == '-') {
+                    if (b < BSIZE) lexbuf[b++] = t;
+                    t = getchar();
+                }
+                if (!isdigit(t)) {
+                    error("Syntax Error: Invalid exponent in number");
+                }
+                while (isdigit(t)) {
+                    if (b < BSIZE) lexbuf[b++] = t;
+                    t = getchar();
+                }
+            }
+        
+            // Finalize
+            if (t != EOF) ungetc(t, stdin);
+            lexbuf[b] = EOS;
+            int type = INTEGER;
+            if(isFloat){
+                type = REAL;
+            }
+            tokenval = insert(lexbuf, NUM, type);  // Keep the full num as string
+            return NUM;
+        }else if (isalpha(t)) { 
+            int p, b = 0;
+            while (isalnum(t)) { 
+                if (b >= BSIZE)
+                    error("Compiler Error");
+                compareBuf[b] = tolower(t);
+                lexbuf[b++] = t; 
+                t = getchar();
+            }
+
+            compareBuf[b] = EOS;
+            lexbuf[b] = EOS;
+            if (t != EOF)
+                ungetc(t, stdin);
+
+            if (strcmp(compareBuf, "div") == 0){
+                tokenval = DIV;
+                token = MULOP;
+                p = lookup(compareBuf);
+            }else if (strcmp(compareBuf, "and") == 0){
+                tokenval = AND;
+                token = MULOP;
+            }else if (strcmp(compareBuf, "mod") == 0){
+                tokenval = MOD;
+                token = MULOP;
+            }else if (strcmp(compareBuf, "or") == 0){
+                tokenval = OR;
+                token = ADDOP;
+            }else{
+                p = lookup(lexbuf);
+                if (p == 0)
+                    p = insert(lexbuf, ID, NONE);
+
+                tokenval = p;
+                token = symtable[p].token;
+            }
+            return token;
+        } else if (t == ':') {
+            t = getchar();
+            if (t == '=') {
+                tokenval = NONE;
+                return ASSIGNOP;
+            } else {
+                if (t != EOF) ungetc(t, stdin);
+                    tokenval = NONE;
+                    return EOD; 
+            }
+        } else if (t == '<') {
+            t = getchar();
+            if (t == '=') {
+                tokenval = LE;
+                return RELOP;
+            } else if (t == '>') {
+                tokenval = NE;
+                return RELOP;
+            } else {
+                if (t != EOF) ungetc(t, stdin);
+                tokenval = LT;
+                return RELOP;
+            }
+        } else if (t == '>') {
+            t = getchar();
+            if (t == '=') {
+                tokenval = GE;
+                return RELOP;
+            } else {
+                if (t != EOF) ungetc(t, stdin);
+
+                tokenval = GT;
+                return RELOP;
+            }
+        } else if (t == '=') {
+            tokenval = EQ;
+            return RELOP;
+        } else if (t == '+' || t == '-') {
+            tokenval = t;
+            return ADDOP;
+        } else if (t == '*' || t == '/') {
+            tokenval = t;
+            return MULOP;
+        } else if (t == EOF)
+            return DONE;
+        else {
+            tokenval = NONE;
+            return t;
+        }
+    }
+}
+
+/* Parser */
+void parse(void){ /* parser and translate expression list*/
+    lookahead = lexan();
+    program();
+}
+
+void program(void) {
+    header(); declarations(); 
+    is_main_block = 1;
+    block(); match('.');
+}
+
+void header(void) {
+    match(PROGRAM);
+    match(ID); 
+    match('('); 
+    match(INPUT); 
+    match(','); 
+    match(OUTPUT);  
+    match(')');  
+    match(';');  
+    emit(PROGRAM, tokenval);
+}
+
+void declarations(void) {
+    if (lookahead == VAR){
+        match(VAR);  
+        variableDeclarations();
+    }else{
+        // <epsilon> 
+    }
+}
+
+void variableDeclarations(void) {
+    variableDeclaration();
+    moreVariableDeclarations();
+}
+
+void moreVariableDeclarations (void){
+    if(lookahead == ID){
+        variableDeclaration();
+        moreVariableDeclarations();
+    }else{
+        // <epsilon> 
+    }
+}
+
+void variableDeclaration (void){
+    identifierList();
+    match(EOD); 
+    
+    type();
+    match(';'); 
+}
+
+void identifierList(void) {
+    if (lookahead == ID) {
+        strcpy(current_ids[current_id_count++], symtable[tokenval].lexptr);
+        match(ID);
+        moreIdList();
+    } else {
+        error("Syntax Error");
+    }
+}
+
+void moreIdList(void) {
+    if (lookahead == ',') {
+        match(',');
+        if (lookahead == ID) {
+            strcpy(current_ids[current_id_count++], symtable[tokenval].lexptr);
+            match(ID);
+            moreIdList();
+        } else {
+            error("Syntax Error: Expected identifier after ','");
+        }
+    }else{
+        // <epsilon>
+    }
+}
+
+void type(void){
+    if (lookahead == INTEGER || lookahead == REAL) {
+        int declared_type = lookahead;
+        if (lookahead == INTEGER) {
+            match(INTEGER); emit(INTEGER, tokenval);
+        } else {
+            match(REAL); emit(REAL, tokenval);
+        }
+
+        for (int i = 0; i < current_id_count; ++i) {
+            int tval = lookup(current_ids[i]);
+            if (tval == 0) tval = insert(current_ids[i], ID, declared_type);
+            
+            symtable[tval].type = declared_type;
+            emit(ID, tval); 
+            if (i < current_id_count - 1) {
+                emit(',', tokenval);
+            }
+        }
+        emit(';', tokenval);
+
+        current_id_count = 0; // Reset for the next declaration
+    } else {
+        error("Syntax Error: Expected type 'integer' or 'real' ");
+    }
+}
+
+void block (void){
+    match(BEGIN);
+    if (is_main_block == 1) {
+        printf("int main(void)\n");
+    }
+    is_main_block++;
+    int cur_is_main_block = is_main_block;
+    emit(BEGIN, NONE); 
+
+    statements();
+
+    match(END);
+    if (cur_is_main_block == 2) {
+        printf("return 0;\n");
+    }
+    emit(END, NONE); 
+}
+
+void statements (void){
+    statement();
+    r3();
+}
+
+void r3 (void){
+    if(semicolon_read == 1){
+        semicolon_read = 0;
+        statement();
+        r3();
+    }else if(lookahead == ';'){
+        match(';'); 
+        statement();
+        r3();
+    }else{
+        // <epsilon> 
+    }
+}
+
+void statement (void){
+    switch (lookahead){
+        case ID:
+            int tval = tokenval;
+            int idToken = tval;
+            match(ID); emit(ID, tval); 
+
+            tval = tokenval;
+            match(ASSIGNOP); emit(ASSIGNOP, tval); 
+
+            int expr_type = expression(); 
+            if (symtable[idToken].type == INTEGER && expr_type == REAL) {
+                error("Type Error: Can't assign float/real into integer");
+            }
+            // int idType = symtable[idToken].type;
+            
+            // if (idType == INTEGER && expr_type == REAL) {
+            //     error("Type Error: Can't assign float/real into integer");
+            // }else if (idType == INTEGER && expr_type != REAL){
+            //     error("Type Error");
+            // }
+            emit(';', tokenval); break;
+            break;
+            
+        case BEGIN:
+            block(); break;
+        case IF:
+            ifStatement(); break;
+        case REPEAT:
+            match(REPEAT); emit(REPEAT, tokenval); 
+            statements(); 
+            match(UNTIL); emit(UNTIL, tokenval); 
+            emit('(', tokenval); expression(); emit(')', tokenval); emit(';', tokenval); break;
+        case WRITELN:
+            match(WRITELN);  match('('); 
+            store_emit_buffer = 1;
+            int type = simpleExpression();
+            emit(WRITELN, type);
+            store_emit_buffer = 0;
+            match(')'); emit(';', tokenval); break;
+        default:
+            return;
+    }
+}
+
+void ifStatement(void){
+    match(IF); emit(IF, tokenval);
+
+    emit('(',tokenval);
+    expression(); 
+    emit(')',tokenval);
+
+    match(THEN); emit(THEN, tokenval); 
+   
+    statement(); 
+    if (lookahead == ';'){
+        match(';');
+        semicolon_read = 1;
+    }
+    optionalTail();
+}
+
+void optionalTail(void){
+    if(lookahead == ELSE){
+        match(ELSE); emit(ELSE, tokenval);
+        statement();
+    }else{
+        // <epsilon>
+    }
+}
+
+void expressionList (void){
+    expression();
+    r4();
+}
+
+void r4 (void){
+    if(lookahead == ','){
+        match(','); emit(',', tokenval); 
+        expression(); 
+        r4();
+    }else{
+        // <epsilon> 
+    }
+}
+
+int simpleExpression(void){
+    int leftType = trivialCase();
+    return r5(leftType);
+}
+
+int r5(int leftType){
+    if (lookahead == ADDOP){
+        int tval = tokenval;
+        match(ADDOP); 
+        if(store_emit_buffer == 0){
+            emit(ADDOP, tval);  
+        }else{
+            store_emit(ADDOP, tval); 
+        } 
+        
+        int rightType = term();
+        int type = INTEGER;
+        if (leftType == REAL || rightType == REAL){
+            type = REAL;
+        }
+        // if(leftType != REAL || leftType != INTEGER || rightType != REAL || rightType != INTEGER){
+        //     error("Type Error");
+        //     return NONE;
+        // }
+        return r5(type);
+    }else{
+        // <epsilon>
+        return leftType;
+    }
+}
+
+int trivialCase(void){
+    if (lookahead == ADDOP) {
+        int tval = tokenval;
+        match(ADDOP);
+        if(store_emit_buffer == 0){
+            emit(ADDOP, tval); 
+        }else{
+            store_emit(ADDOP, tval);
+        } 
+        return term();
+    }
+    return term();
+}
+
+int term(void){
+    int leftType = factor();
+    return r6(leftType);
+}
+
+int r6(int leftType){
+    if (lookahead == MULOP){ 
+        int tval = tokenval;
+        match(MULOP);
+        
+        if (store_emit_buffer == 0){
+            emit(MULOP, tval);  
+        }else{
+            store_emit(MULOP, tval);  
+        }
+        int rightType = factor();
+        int type = INTEGER;
+        if(leftType == REAL || rightType == REAL){
+            type = REAL;
+        }
+        // if(leftType != REAL || leftType != INTEGER || rightType != REAL || rightType != INTEGER){
+        //     error("Type Error");
+        //     return NONE;
+        // }
+        return r6(type);
+    }
+    return leftType;
+}
+
+int expression(void){
+    int leftType = simpleExpression();
+    return a1(leftType);
+}
+
+int a1(int leftType){
+    if(lookahead == RELOP){ 
+        int tval = tokenval;
+        match(RELOP); emit(RELOP, tval); 
+
+        int rightType = simpleExpression();
+        if ((leftType != INTEGER && leftType != REAL) || (rightType != INTEGER && rightType != REAL)) {
+            error("Type Error: Type mismatch in relational expression");
+        }
+        return BOOL;
+    }
+    return leftType; 
+}
+
+int factor(void){
+    switch (lookahead){
+        case ID: {
+            int tval = tokenval;
+
+            if (store_emit_buffer == 0){
+                emit(ID, tokenval); 
+            }else{
+                store_emit(ID, tokenval); 
+            }
+            match(ID);
+            return symtable[tval].type;
+        }
+        case NUM: {
+            int t = symtable[tokenval].type;
+             
+            if (store_emit_buffer == 0){
+                emit(NUM, tokenval); 
+            }else{
+                store_emit(NUM, tokenval); 
+            }
+            match(NUM);
+            return t;
+        }
+        case '(':
+            if (store_emit_buffer == 0){
+                emit('(', tokenval);
+            }else{
+                store_emit('(', tokenval);
+            }
+
+            match('(');
+            int t = expression();
+
+            if (store_emit_buffer == 0){
+                emit(')', tokenval); 
+            }else{
+                store_emit(')', tokenval); 
+            }
+            
+            match(')');
+            return t;
+
+        case NOT:
+
+            if (store_emit_buffer == 0){
+                emit(NOT, tokenval); 
+            }else{
+                store_emit(NOT, tokenval); 
+            }
+            match(NOT);
+            int t2 = factor();
+            if (t2 != BOOL) error("Type Error: Expected boolean for NOT");
+            return BOOL;
+        default:
+            error("Error: Invalid factor");
+            return NONE;
+    }
+}
+
+void match(int t) {
+    if(lookahead == t)
+        lookahead = lexan();
+    else {
+        error("Syntax Error");
+    }       
+}
+
+/* Emitter */
+void emit(int t, int tval){
+    switch(t){
+        case '+' : case '-' : case '*' : case '/': case '%':
+            printf("%c ", t); break;
+
+        case PROGRAM:
+            printf("#include<stdio.h>\n"); break;
+
+        case '(': case ')': case ',':
+            printf("%c", t); break;
+
+        case ';':
+            printf("%c\n", t); break;
+
+        case NUM:
+            printf("%s", symtable[tval].lexptr); break;
+
+        case BEGIN:
+            printf("{\n"); break;
+
+        case END:
+            printf("}\n"); break;
+        
+        case ID:
+            printf("%s", symtable[tval].lexptr); break;
+
+        case ASSIGNOP:
+            printf("="); break;
+        
+        case RELOP:
+            switch (tval){
+                case LT:
+                    printf("<"); return;
+                case LE:
+                    printf("<="); return;
+                case GT:
+                    printf(">"); return;
+                case GE:
+                    printf(">="); return;
+                case EQ:
+                    printf("=="); return;
+                case NE:
+                    printf("!="); return;
+                
+                default: return;
+            }
+
+        case MULOP: 
+            switch (tval){
+                case '*':
+                    printf("*"); return;
+                case '/':
+                    printf("/"); return;
+                case DIV:
+                    printf("/"); return;
+                case MOD:
+                    printf("%%"); return;
+                case AND:
+                    printf("&&"); return;
+                
+                default: return;
+            }
+        
+        case ADDOP:
+            switch (tval){
+                case '+':
+                    printf("+"); return;
+                case '-':
+                    printf("-"); return;
+                case OR:
+                    printf("||"); return;
+                
+                default: return;
+            }
+        
+        case INTEGER:
+            printf("int "); break;
+        
+        case REAL:
+            printf("float "); break;
+        
+        case IF:
+            printf("if"); break;
+        
+        case THEN:
+            printf("\n"); break;
+        
+        case ELSE:
+            printf("else\n"); break;
+        
+        case NOT:
+            printf("!"); break;
+        
+        case REPEAT:
+            printf("do\n{\n"); break;
+    
+        case UNTIL:
+            printf("}\nwhile !"); break;
+        
+        case WRITELN:
+            printf("printf(\"%%");
+            if(tval == INTEGER){
+                printf("d");
+            }else if (tval == REAL){
+                printf("f");
+            }
+            printf("\\n\",");
+
+            for (int i = 0; i < emit_buffer_index; i++){
+                emit(emitBuffer[i].token, emitBuffer[i].tokenval);
+            }
+            emit_buffer_index = 0;
+            printf(")");
+            break;
+        
+        default:
+            printf("token %d, tokenval %d\n", t, tval);
+    }
+}
+
+/* Symbol */
+int lookup(char s[]) {
+    int p;
+    char s_lower[BSIZE], p_lower[BSIZE];
+
+    for (p = lastentry; p > 0; p = p - 1) {
+        // Convert s to lowercase
+        int i = 0;
+        while (s[i] && i < BSIZE - 1) {
+            s_lower[i] = tolower((unsigned char)s[i]);
+            i++;
+        }
+        s_lower[i] = '\0';
+
+        // Convert symtable[p].lexptr to lowercase
+        i = 0;
+        while (symtable[p].lexptr[i] && i < BSIZE - 1) {
+            p_lower[i] = tolower((unsigned char)symtable[p].lexptr[i]);
+            i++;
+        }
+        p_lower[i] = '\0';
+
+        // Compare lowercased strings
+        if (strcmp(s_lower, p_lower) == 0)
+            return p;
+    }
+    return 0;
+}
+
+
+int insert(char s[], int tok, int type){
+    int len;
+    len = strlen(s); 
+
+    if(lastentry + 1 >= SYMAX)
+        error("Symbol Table Full");
+    if(lastchar + len + 1 >= STRMAX)
+        error("Lexemes Array Full");
+
+    lastentry = lastentry + 1;
+    symtable[lastentry].token = tok;
+    symtable[lastentry].lexptr = &lexemes[lastchar + 1];
+    symtable[lastentry].type = type;
+
+    lastchar = lastchar + len + 1;
+    strcpy(symtable[lastentry].lexptr, s);
+    return lastentry;
+
+}
+
+/* Init */
+void init(void){ /* Loads keywords into symtable*/
+    struct entry *p;
+    for(p = keywords; p->token; p++)
+        insert(p->lexptr, p->token, p->type);
+}
+
+/* Error */
+void error(char *m){
+    fprintf(stderr, "line %d: %s\n", lineno, m);
+    exit(1); /* Unsuccessful termination */
+}
+
+void store_emit(int token, int tokenval) {
+    if (emit_buffer_index < SYMAX) {
+        emitBuffer[emit_buffer_index].token = token;
+        emitBuffer[emit_buffer_index].tokenval = tokenval;
+        emit_buffer_index++;
+    } else {
+        error("Emit buffer overflow");
+    }
+}

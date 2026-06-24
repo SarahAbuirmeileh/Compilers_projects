@@ -1,0 +1,226 @@
+# Original Grammar
+
+Program -> Header Declarations Block.
+Header -> program id(input,output) ;
+Declarations ->VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclarations VariableDeclaration
+                    | VariableDeclaration
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> IdentifierList , id | id
+Type -> integer | real
+Block -> begin Statements end
+
+Statements -> Statements ; Statement | Statement
+Statement -> id := Expression
+            | Block
+            | if Expression then Statement else Statement
+            | repeat Statement until Expression
+            | writeln(SimpleExpression)
+            | <epsilon>
+
+ExpressionList -> ExpressionList , Expression | Expression
+Expression -> SimpleExpression relop SimpleExpression | SimpleExpression
+SimpleExpression -> Term| addop Term| SimpleExpression addop Term
+Term -> Term mulop Factor| Factor
+Factor -> id | num | ( Expression ) | not Factor
+
+*****************************************************************************************
+
+# Grammar After Removing Ambiguity 
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ;
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclarations VariableDeclaration | VariableDeclaration
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> IdentifierList , id | id
+Type -> integer | real
+
+Block -> begin Statements end
+Statements -> Statements ; Statement | Statement
+
+Statement -> id := Expression
+            | Block
+            | IfStatement
+            | repeat Statements until Expression
+            | writeln(SimpleExpression)
+
+IfStatement  -> Matched | Unmatched
+Matched   -> if Expression then Matched else Matched
+Unmatched -> if Expression then IfStatement 
+           | if Expression then Matched else Unmatched
+
+ExpressionList -> ExpressionList , Expression | Expression
+Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
+SimpleExpression -> SimpleExpression addop Term | addop Term | Term
+Term -> Term mulop Factor | Factor
+Factor -> id | num | ( Expression ) | not Factor
+
+*************************************************************************************************
+
+# Grammar After Removing Left Recursion
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ;
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclaration R1
+R1 -> VariableDeclaration R1 | <epsilon>
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> id MoreIdList
+MoreIdList -> , id OtherIdIist | <epsilon>
+Type -> integer | real
+
+Block -> begin Statements end
+Statements -> Statement R3 
+R3 -> ; Statement R3 | <epsilon>
+
+Statement -> id := Expression
+            | Block
+            | IfStatement
+            | repeat Statements until Expression
+            | writeln(SimpleExpression)
+
+IfStatement  -> Matched | Unmatched
+Matched   -> if Expression then Matched else Matched
+Unmatched -> if Expression then IfStatement 
+           | if Expression then Matched else Unmatched
+
+ExpressionList -> Expression R4
+R4 -> , Expression R4 | <epsilon>
+Expression -> SimpleExpression relop SimpleExpression  | SimpleExpression
+
+TrivialCase -> addop Term | Term
+SimpleExpression -> TrivialCase R5
+R5 -> addop Term R5 | <epsilon>
+
+Term -> Factor R6
+R6 -> mulop Factor R6 | <epsilon>
+Factor -> id | num | ( Expression ) | not Factor
+
+******************************************************************************************************
+
+# Grammar After Left Factoring
+# Final Grammar (after solving the 3 issues):
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ;
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclaration MoreVariableDeclarations
+MoreVariableDeclarations -> VariableDeclaration MoreVariableDeclarations | <epsilon>
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> id OtherIdIist
+MoreIdList -> , id MoreIdList | <epsilon>
+Type -> integer | real
+
+Block -> begin Statements end
+Statements -> Statement R3 
+R3 -> ; Statement R3 | <epsilon>
+
+Statement -> id := Expression
+                  | Block
+                  | IfStatement
+                  | repeat Statements until Expression
+                  | writeln(SimpleExpression)
+
+IfStatement -> if Expression then Statement OptionalTail 
+OptionalTail -> else Statement | <epsilon>
+
+ExpressionList -> Expression R4
+R4 -> , Expression R4 | <epsilon>
+Expression -> SimpleExpression A1
+A1 -> relop SimpleExpression  | <epsilon>
+
+TrivialCase -> addop Term | Term
+SimpleExpression -> TrivialCase  R5
+R5 -> addop Term R5 | <epsilon>
+
+Term -> Factor R6
+R6 -> mulop Factor R6 | <epsilon>
+Factor -> id | num | ( Expression ) | not Factor
+
+******************************************************************************************************
+
+# Final Grammar (After adding the semantic actions):
+# (The final grammar which is used in the compiler)
+
+Program -> Header Declarations Block.
+Header -> program id (input, output) ; {print("#include<stdio.h>")}
+Declarations -> VAR VariableDeclarations | <epsilon>
+VariableDeclarations -> VariableDeclaration MoreVariableDeclarations
+MoreVariableDeclarations -> VariableDeclaration MoreVariableDeclarations | <epsilon>
+
+VariableDeclaration -> IdentifierList : Type ;
+IdentifierList -> id {current_ids.add(id)} OtherIdIist
+MoreIdList -> , id {current_ids.add(id)} MoreIdList | <epsilon>
+Type -> integer {print("int"); print(current_ids) }
+        | real  { print("float"); print(current_ids)}
+
+Block -> begin {if (block.type == main) print("int main(void){") 
+                else print("{")} 
+        Statements end {if (block.type == main) print("return 0;") else print("}")}
+Statements -> Statement R3 
+R3 -> ; Statement R3 | <epsilon>
+
+Statement -> id  {print(id.lexeme)} := {print("=")} Expression {print(";")} 
+            { 
+                statement.type = float if id.type == float and (expression.type == float  or expression.type == integer)
+                else integer if id.type == integer and expression.type == integer
+                else type_error 
+            }
+            | Block
+            | IfStatement
+            | repeat {print("do\n{")}  Statements until {print("}\nwhile !(")} Expression {print(");")}
+            | writeln(SimpleExpression) {statement.type = SimpleExpression.type}  
+                { if statement.type == integer print("printf("%d\n,")") 
+                    print(emitBuffer); print(");")
+                  else if statement.type == float print("printf("%f\n,")") 
+                    print(emitBuffer); print(");")
+                  else type_error
+                }
+
+IfStatement -> if {print("if(")} Expression then {print(")then")}  Statement OptionalTail 
+OptionalTail -> else {print("else")} Statement | <epsilon>
+
+ExpressionList -> Expression R4
+R4 -> ,  {print(",")} Expression R4 | <epsilon>
+Expression -> SimpleExpression A1 {A1.leftType = SimpleExpression.type} {Expression.type = A1.type}
+A1 -> relop SimpleExpression  
+        {
+            A1.type = TYPE_ERROR if (SimpleExpression.type != A1.leftType)
+                      else A1.type = BOOL
+        }  
+        | {A1.type = A1.leftType} <epsilon>
+
+TrivialCase -> addop { emitBuffer.add(addop.type)} Term {TrivialCase.type = Term.type}
+            | Term {TrivialCase.type = Term.type}
+SimpleExpression -> TrivialCase  R5 {R5.leftType = TrivialCase.type}
+
+R5 -> addop { emitBuffer.add(addop.type)} Term R5 
+    {
+        R5.type = R5`.type if if ((R5.leftType == real or Term.type == real) and (Term.type == real or  Term.type == integer and R5.leftType == real or  R5.leftType == integer))
+        or  (R5.leftType == integer and Term.type == integer ) 
+        else type_error
+    } 
+    | {R5.type = R5.leftType} <epsilon>
+
+Term -> Factor R6 {R6.leftType = Factor.Type} {term.type = r6.type}
+R6 -> mulop { emitBuffer.add(mulop.type)} Factor R6` 
+    { 
+        R6.type = R6`.type if ((R6.leftType == real or Factor.type == real) and (Factor.type == real or  Factor.type == integer and R6.leftType == real or  R6.leftType == integer))
+        or  (R6.leftType == integer and Factor.type == integer ) 
+        else type_error
+    }
+    {
+        R6`.leftType = real if ((R6.leftType == real or Factor.type == real) and (Factor.type == real or  Factor.type == integer and R6.leftType == real or  R6.leftType == integer)) 
+                    else  integer if (R6.leftType == integer and Factor.type == integer ) 
+                    else type_error
+    }
+    | {R6.type = R6.leftType} <epsilon>
+Factor -> id {print(id.lexeme)} {Factor.type = id.type}
+        | num {print(num.value)} {num.type = id.type}
+        | {print("(")} Expression {print(")")} { Factor.type = Expression.type }
+        | not {print("!")}  Factor1 {Factor.type = Factor1.type if Factor1.type == boolean else type_error}
